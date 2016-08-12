@@ -1,6 +1,6 @@
 extern crate base64;
 extern crate hyper;
-extern crate chrono;
+extern crate iso8601;
 extern crate xml;
 
 mod error;

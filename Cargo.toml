@@ -7,6 +7,6 @@ version = "0.1.0"
 
 [dependencies]
 base64 = "0.2.0"
-chrono = "0.2.25"
 hyper = "0.9.10"
+iso8601 = "0.1.1"
 xml-rs = "0.3.4"

@@ -6,7 +6,7 @@ use error::ParseError;
 use base64;
 use xml::reader::{XmlEvent, EventReader};
 use xml::name::OwnedName;
-use chrono::DateTime;
+use iso8601::datetime;
 use std::io::{self, ErrorKind, Read};
 use std::collections::BTreeMap;
 
@@ -175,8 +175,8 @@ pub fn parse_value<R: Read>(reader: &mut EventReader<R>) -> ParseResult<Value> {
                         io::Error::new(ErrorKind::Other, format!("invalid value for double: {}", data))
                     })))
                 } else if name == &OwnedName::local("dateTime.iso8601") {
-                    Value::DateTime(try!(DateTime::parse_from_rfc3339(&data).map_err(|_| {
-                        io::Error::new(ErrorKind::Other, format!("invalid value for dateTime.iso8601: {}", data))
+                    Value::DateTime(try!(datetime(&data).map_err(|e| {
+                        io::Error::new(ErrorKind::Other, format!("invalid value for dateTime.iso8601: {} ({})", data, e))
                     })))
                 } else if name == &OwnedName::local("base64") {
                     Value::Base64(try!(base64::decode(&data).map_err(|_| {
@@ -206,6 +206,7 @@ mod tests {
     use {Response, Value};
     use xml::EventReader;
     use error::Fault;
+    use std::fmt::Debug;
 
     fn read_response(xml: &str) -> ParseResult<Response> {
         parse_response(&mut EventReader::from_str(xml))
@@ -215,8 +216,22 @@ mod tests {
         parse_value(&mut EventReader::from_str(xml))
     }
 
+    fn assert_ok<T: Debug, E: Debug>(result: Result<T, E>) {
+        match result {
+            Ok(t) => println!("assert_ok successful on Ok: {:?}", t),
+            Err(e) => panic!("assert_ok called on Err value: {:?}", e),
+        }
+    }
+
+    fn assert_err<T: Debug, E: Debug>(result: Result<T, E>) {
+        match result {
+            Ok(t) => panic!("assert_err called on Ok value: {:?}", t),
+            Err(e) => println!("assert_err successful on Err: {:?}", e),
+        }
+    }
+
     #[test]
-    fn fault_response() {
+    fn parses_fault() {
         assert_eq!(read_response(r##"
 <?xml version="1.0"?>
 <methodResponse>
@@ -239,7 +254,42 @@ mod tests {
             fault_code: 4,
             fault_string: "Too many parameters.".into(),
         })));
+    }
 
+    #[test]
+    fn ignores_additional_fault_fields() {
+        assert_eq!(read_response(r##"
+<?xml version="1.0"?>
+<methodResponse>
+   <fault>
+      <value>
+         <struct>
+            <member>
+               <name>faultCode</name>
+               <value><int>4</int></value>
+               </member>
+            <member>
+               <name>faultString</name>
+               <value><string>Too many parameters.</string></value>
+               </member>
+            <member>
+               <name>unnecessaryParameter</name>
+               <value><string>Too many parameters.</string></value>
+               </member>
+            </struct>
+         </value>
+      </fault>
+   </methodResponse>"##),
+        Ok(Err(Fault {
+            fault_code: 4,
+            fault_string: "Too many parameters.".into(),
+        })));
+    }
+
+    #[test]
+    fn rejects_invalid_faults() {
+        // Make sure to reject type errors in <fault>s - They're specified to contain specifically
+        // typed fields.
         assert!(read_response(r##"
 <?xml version="1.0"?>
 <methodResponse>
@@ -261,8 +311,26 @@ mod tests {
     }
 
     #[test]
-    fn values() {
-        assert_eq!(read_value("<value>  I'm a string!  </value>"),
+    fn parses_string_value_with_whitespace() {
+        assert_eq!(read_value("<value><string>  I'm a string!  </string></value>"),
             Ok(Value::String("  I'm a string!  ".into())));
+    }
+
+    #[test]
+    fn parses_date_values() {
+        assert_ok(read_value("<value><dateTime.iso8601>2015-02-18T23:16:09Z</dateTime.iso8601></value>"));
+        assert_ok(read_value("<value><dateTime.iso8601>19980717T14:08:55</dateTime.iso8601></value>"));
+    }
+
+    #[test]
+    fn parses_raw_value_as_string() {
+        assert_eq!(read_value("<value>\t  I'm a string!  </value>"),
+            Ok(Value::String("\t  I'm a string!  ".into())));
+    }
+
+    #[test]
+    fn rejects_value_with_attributes() {
+        // XXX we *should* reject everything with attributes
+        assert_err(read_value(r#"<value name="ble">\t  I'm a string!  </value>"#));
     }
 }

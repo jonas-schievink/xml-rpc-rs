@@ -1,6 +1,6 @@
 //! Contains the different types of values understood by XML-RPC.
 
-use chrono::{DateTime, FixedOffset};
+use iso8601::DateTime;
 
 use std::collections::BTreeMap;
 
@@ -17,9 +17,7 @@ pub enum Value {
     /// `<double>`
     Double(f64),
     /// `<dateTime.iso8601>`, an ISO 8601 formatted date/time value.
-    // FIXME We'll assume RFC 3339 semantics instead! Check if that's okay, if not, use an
-    // alternative to `chrono`.
-    DateTime(DateTime<FixedOffset>),
+    DateTime(DateTime),
     /// `<base64>`, base64-encoded binary data.
     Base64(Vec<u8>),
 
@@ -53,8 +51,8 @@ impl From<f64> for Value {
     }
 }
 
-impl From<DateTime<FixedOffset>> for Value {
-    fn from(other: DateTime<FixedOffset>) -> Self {
+impl From<DateTime> for Value {
+    fn from(other: DateTime) -> Self {
         Value::DateTime(other)
     }
 }
