@@ -1,8 +1,10 @@
 //! Contains the different types of values understood by XML-RPC.
 
+use base64::encode;
 use iso8601::DateTime;
 
 use std::collections::BTreeMap;
+use std::io::{self, Write};
 
 /// The possible XML-RPC values.
 #[derive(Debug, PartialEq)]
@@ -25,6 +27,58 @@ pub enum Value {
     Struct(BTreeMap<String, Value>),
     /// `<array>`, a list of arbitrary (heterogeneous) values.
     Array(Vec<Value>),
+}
+
+impl Value {
+    pub fn format<W: Write>(&self, fmt: &mut W) -> io::Result<()> {
+        try!(writeln!(fmt, "<value>"));
+
+        match *self {
+            Value::Int(i) => {
+                try!(writeln!(fmt, "<i4>{}</i4>", i));
+            }
+            Value::Bool(b) => {
+                try!(writeln!(fmt, "<boolean>{}</boolean>", if b { "1" } else { "0" }));
+            }
+            Value::String(ref s) => {
+                // FIXME escape
+                try!(writeln!(fmt, "<string>{}</string>", s));
+            }
+            Value::Double(d) => {
+                try!(writeln!(fmt, "<double>{}</double>", d));
+            }
+            Value::DateTime(_date_time) => {
+                // TODO not easy :(
+                unimplemented!();
+            }
+            Value::Base64(ref data) => {
+                try!(writeln!(fmt, "<base64>{}</base64>", encode(data)));
+            }
+            Value::Struct(ref map) => {
+                try!(writeln!(fmt, "<struct>"));
+                for (ref name, ref value) in map {
+                    try!(writeln!(fmt, "<member>"));
+                    // FIXME escape
+                    try!(writeln!(fmt, "<name>{}</name>", name));
+                    try!(value.format(fmt));
+                    try!(writeln!(fmt, "</member>"));
+                }
+                try!(writeln!(fmt, "</struct>"));
+            }
+            Value::Array(ref array) => {
+                try!(writeln!(fmt, "<array>"));
+                try!(writeln!(fmt, "<data>"));
+                for value in array {
+                    try!(value.format(fmt));
+                }
+                try!(writeln!(fmt, "</data>"));
+                try!(writeln!(fmt, "</array>"));
+            }
+        }
+
+        try!(writeln!(fmt, "</value>"));
+        Ok(())
+    }
 }
 
 impl From<i32> for Value {

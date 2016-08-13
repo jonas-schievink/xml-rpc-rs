@@ -36,6 +36,12 @@ impl From<ParseError> for RequestError {
     }
 }
 
+impl From<io::Error> for RequestError {
+    fn from(e: io::Error) -> Self {
+        RequestError::HyperError(HyperError::from(e))
+    }
+}
+
 /// Describes possible error that can occur when parsing a `Response`.
 #[derive(Debug, PartialEq, Eq)]
 pub enum ParseError {
