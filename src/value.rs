@@ -14,7 +14,7 @@ pub enum Value {
     /// `<boolean>`, 0 == `false`, 1 == `true`.
     Bool(bool),
     /// `<string>`
-    // FIXME zero-copy? `Cow<'static,..>`?
+    // FIXME zero-copy? `Cow<'static, ..>`?
     String(String),
     /// `<double>`
     Double(f64),
@@ -27,6 +27,8 @@ pub enum Value {
     Struct(BTreeMap<String, Value>),
     /// `<array>`, a list of arbitrary (heterogeneous) values.
     Array(Vec<Value>),
+
+    // TODO Nil
 }
 
 impl Value {

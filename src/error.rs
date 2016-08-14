@@ -6,6 +6,8 @@ use hyper::Error as HyperError;
 use xml::reader::Error as XmlError;
 
 use std::io;
+use std::fmt::{self, Formatter, Display};
+use std::error::Error;
 
 /// A request could not be executed.
 ///
@@ -42,6 +44,24 @@ impl From<io::Error> for RequestError {
     }
 }
 
+impl Display for RequestError {
+    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        match *self {
+            RequestError::HyperError(ref err) => write!(fmt, "HTTP error: {}", err),
+            RequestError::ParseError(ref err) => write!(fmt, "parse error: {}", err),
+        }
+    }
+}
+
+impl Error for RequestError {
+    fn description(&self) -> &str {
+        match *self {
+            RequestError::HyperError(ref err) => err.description(),
+            RequestError::ParseError(ref err) => err.description(),
+        }
+    }
+}
+
 /// Describes possible error that can occur when parsing a `Response`.
 #[derive(Debug, PartialEq, Eq)]
 pub enum ParseError {
@@ -67,6 +87,26 @@ impl From<XmlError> for ParseError {
 impl From<io::Error> for ParseError {
     fn from(e: io::Error) -> Self {
         ParseError::XmlError(XmlError::from(e))
+    }
+}
+
+impl Display for ParseError {
+    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        match *self {
+            ParseError::XmlError(ref err) => write!(fmt, "malformed XML: {}", err),
+            ParseError::InvalidValue(ref desc) => write!(fmt, "invalid value: {}", desc),
+            ParseError::UnexpectedXml(ref desc) => write!(fmt, "unexpected XML element: {}", desc),
+        }
+    }
+}
+
+impl Error for ParseError {
+    fn description(&self) -> &str {
+        match *self {
+            ParseError::XmlError(ref err) => err.description(),
+            ParseError::InvalidValue(ref desc) => desc,
+            ParseError::UnexpectedXml(ref desc) => desc,
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 [package]
 authors = ["Jonas Schievink <jonasschievink@gmail.com>"]
-description = "A rustic XML-RPC implementation"
+description = "An XML-RPC implementation for Rust"
 license = "MIT/Apache-2.0"
 name = "xmlrpc"
 version = "0.1.0"
