@@ -1,5 +1,6 @@
 use {Value, Response};
 use parser::parse_response;
+use value::escape_xml;
 use error::RequestError;
 
 use xml::EventReader;
@@ -61,9 +62,9 @@ impl<'a> Request<'a> {
 
     /// Formats this `Request` as XML.
     pub fn write_as_xml<W: Write>(&self, fmt: &mut W) -> io::Result<()> {
-        try!(write!(fmt, r#"<?xml version="1.1 encoding="utf-8"?>"#));
+        try!(write!(fmt, r#"<?xml version="1.1" encoding="utf-8"?>"#));
         try!(write!(fmt, r#"<methodCall>"#));
-        try!(write!(fmt, r#"    <methodName>{}</methodName>"#, self.name)); // FIXME escape
+        try!(write!(fmt, r#"    <methodName>{}</methodName>"#, escape_xml(&self.name)));
         try!(write!(fmt, r#"    <params>"#));
         for &(_, ref value) in &self.args {
             try!(write!(fmt, r#"        <param>"#));
@@ -82,3 +83,21 @@ impl<'a> Request<'a> {
 /// this is `Ok`. The `Response` can still denote a `Fault` if the server returned a `<fault>`
 /// response.
 pub type RequestResult = Result<Response, RequestError>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str;
+
+    #[test]
+    fn escapes_method_names() {
+        let mut output: Vec<u8> = Vec::new();
+        let req = Request::new("x<&x");
+
+        req.write_as_xml(&mut output).unwrap();
+        assert!(
+            str::from_utf8(&output)
+            .unwrap()
+            .contains("<methodName>x&lt;&amp;x</methodName>"));
+    }
+}
