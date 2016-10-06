@@ -105,6 +105,17 @@ pub fn parse_value<R: Read>(reader: &mut EventReader<R>) -> ParseResult<Value> {
     // <value>
     try!(expect_open(reader, "value"));
 
+    value = try!(parse_value_inner(reader));
+
+    // </value>
+    try!(expect_close(reader, "value"));
+
+    Ok(value)
+}
+
+pub fn parse_value_inner<R: Read>(reader: &mut EventReader<R>) -> ParseResult<Value> {
+    let value: Value;
+
     // Raw string or specific type tag
     value = match try!(pull_event(reader)) {
         XmlEvent::StartElement { ref name, ref attributes, .. } => {
@@ -145,7 +156,20 @@ pub fn parse_value<R: Read>(reader: &mut EventReader<R>) -> ParseResult<Value> {
 
                 Value::Struct(members)
             } else if name == &OwnedName::local("array") {
-                unimplemented!();   // TODO
+                let mut elements: Vec<Value> = Vec::new();
+                try!(expect_open(reader, "data"));
+                loop {
+                    match try!(pull_event(reader)) {
+                        XmlEvent::EndElement { ref name } if name == &OwnedName::local("data") => break,
+                        XmlEvent::StartElement { ref name, .. } if name == &OwnedName::local("value") => {
+                            elements.push(try!(parse_value_inner(reader)));
+                            try!(expect_close(reader, "value"));
+                        }
+                        _event => return unexpected("expected </data> or <value>")
+                    }
+                }
+                try!(expect_close(reader, "array"));
+                Value::Array(elements)
             } else {
                 // All other types expect raw characters...
                 let data = match try!(pull_event(reader)) {
@@ -192,9 +216,6 @@ pub fn parse_value<R: Read>(reader: &mut EventReader<R>) -> ParseResult<Value> {
         }
         _ => return unexpected("invalid <value> content"),
     };
-
-    // </value>
-    try!(expect_close(reader, "value"));
 
     Ok(value)
 }
@@ -320,6 +341,11 @@ mod tests {
     fn parses_date_values() {
         assert_ok(read_value("<value><dateTime.iso8601>2015-02-18T23:16:09Z</dateTime.iso8601></value>"));
         assert_ok(read_value("<value><dateTime.iso8601>19980717T14:08:55</dateTime.iso8601></value>"));
+    }
+
+    #[test]
+    fn parses_array_values() {
+      assert_eq!(read_value("<value><array><data><value><i4>5</i4></value><value><string>a</string></value></data></array></value>"), Ok(Value::Array(vec![Value::Int(5), Value::String("a".into())])));
     }
 
     #[test]
