@@ -43,8 +43,7 @@ impl Value {
                 try!(writeln!(fmt, "<boolean>{}</boolean>", if b { "1" } else { "0" }));
             }
             Value::String(ref s) => {
-                // FIXME escape
-                try!(writeln!(fmt, "<string>{}</string>", s));
+                try!(writeln!(fmt, "<string>{}</string>", escape_xml(s)));
             }
             Value::Double(d) => {
                 try!(writeln!(fmt, "<double>{}</double>", d));
@@ -60,8 +59,7 @@ impl Value {
                 try!(writeln!(fmt, "<struct>"));
                 for (ref name, ref value) in map {
                     try!(writeln!(fmt, "<member>"));
-                    // FIXME escape
-                    try!(writeln!(fmt, "<name>{}</name>", name));
+                    try!(writeln!(fmt, "<name>{}</name>", escape_xml(name)));
                     try!(value.format(fmt));
                     try!(writeln!(fmt, "</member>"));
                 }
@@ -81,6 +79,10 @@ impl Value {
         try!(writeln!(fmt, "</value>"));
         Ok(())
     }
+}
+
+pub fn escape_xml(s: &str) -> String {
+    s.replace("&", "&amp;").replace("<", "&lt;")
 }
 
 impl From<i32> for Value {
@@ -116,5 +118,30 @@ impl From<DateTime> for Value {
 impl From<Vec<u8>> for Value {
     fn from(other: Vec<u8>) -> Self {
         Value::Base64(other)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str;
+    use std::collections::BTreeMap;
+  
+    #[test]
+    fn escapes_strings() {
+        let mut output: Vec<u8> = Vec::new();
+
+        Value::from("<xml>&nbsp;string".to_string()).format(&mut output).unwrap();
+        assert_eq!(str::from_utf8(&output).unwrap(), "<value>\n<string>&lt;xml>&amp;nbsp;string</string>\n</value>\n");
+    }
+
+    #[test]
+    fn escapes_struct_member_names() {
+        let mut output: Vec<u8> = Vec::new();
+        let mut map: BTreeMap<String, Value> = BTreeMap::new();
+        map.insert("x&<x".to_string(), Value::from(true));
+
+        Value::Struct(map).format(&mut output).unwrap();
+        assert_eq!(str::from_utf8(&output).unwrap(), "<value>\n<struct>\n<member>\n<name>x&amp;&lt;x</name>\n<value>\n<boolean>1</boolean>\n</value>\n</member>\n</struct>\n</value>\n");
     }
 }
