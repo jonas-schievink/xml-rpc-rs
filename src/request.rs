@@ -1,7 +1,7 @@
 use {Value, Response};
 use parser::parse_response;
-use value::escape_xml;
 use error::RequestError;
+use utils::escape_xml;
 
 use xml::EventReader;
 use hyper::client::{Client, Body};

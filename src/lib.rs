@@ -7,6 +7,7 @@ mod error;
 mod parser;
 mod request;
 mod value;
+mod utils;
 
 pub use error::{RequestError, Fault};
 pub use request::{Request, RequestResult};

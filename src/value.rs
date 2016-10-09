@@ -1,5 +1,7 @@
 //! Contains the different types of values understood by XML-RPC.
 
+use utils::escape_xml;
+
 use base64::encode;
 use iso8601::DateTime;
 
@@ -81,10 +83,6 @@ impl Value {
     }
 }
 
-pub fn escape_xml(s: &str) -> String {
-    s.replace("&", "&amp;").replace("<", "&lt;")
-}
-
 impl From<i32> for Value {
     fn from(other: i32) -> Self {
         Value::Int(other)
@@ -126,7 +124,7 @@ mod tests {
     use super::*;
     use std::str;
     use std::collections::BTreeMap;
-  
+
     #[test]
     fn escapes_strings() {
         let mut output: Vec<u8> = Vec::new();
