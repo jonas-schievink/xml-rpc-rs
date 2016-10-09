@@ -3,7 +3,6 @@ use parser::parse_response;
 use error::RequestError;
 use utils::escape_xml;
 
-use xml::EventReader;
 use hyper::client::{Client, Body};
 use hyper::header::UserAgent;
 
@@ -48,7 +47,7 @@ impl<'a> Request<'a> {
         try!(self.write_as_xml(&mut body));
 
         // Send XML-RPC request
-        let response = try!(client.post("/")
+        let mut response = try!(client.post("/")
             .header(UserAgent("Rust xmlrpc".to_string()))
             .body(Body::BufBody(&body, body.len()))
             .send());
@@ -57,7 +56,7 @@ impl<'a> Request<'a> {
 
         // Read the response and parse it
         // FIXME `BufRead`?
-        Ok(try!(parse_response(&mut EventReader::new(response))))
+        Ok(try!(parse_response(&mut response)))
     }
 
     /// Formats this `Request` as XML.

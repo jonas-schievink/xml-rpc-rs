@@ -4,6 +4,7 @@ use Value;
 
 use hyper::Error as HyperError;
 use xml::reader::Error as XmlError;
+use xml::common::TextPosition;
 
 use std::io;
 use std::fmt::{self, Formatter, Display};
@@ -63,7 +64,7 @@ impl Error for RequestError {
 }
 
 /// Describes possible error that can occur when parsing a `Response`.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub enum ParseError {
     /// Error while parsing (malformed?) XML.
     XmlError(XmlError),
@@ -74,8 +75,12 @@ pub enum ParseError {
     InvalidValue(String),
 
     /// Found an unexpected tag, attribute, etc.
-    // XXX This really wants an XML `Position`
-    UnexpectedXml(String),
+    UnexpectedXml {
+        /// A short description of the kind of data that was expected.
+        expected: String,
+        /// The position of the unexpected data inside the XML document.
+        position: TextPosition,
+    }
 }
 
 impl From<XmlError> for ParseError {
@@ -95,7 +100,12 @@ impl Display for ParseError {
         match *self {
             ParseError::XmlError(ref err) => write!(fmt, "malformed XML: {}", err),
             ParseError::InvalidValue(ref desc) => write!(fmt, "invalid value: {}", desc),
-            ParseError::UnexpectedXml(ref desc) => write!(fmt, "unexpected XML element: {}", desc),
+            ParseError::UnexpectedXml {
+                ref expected,
+                ref position,
+            } => {
+                write!(fmt, "expected {} at {}", expected, position)
+            }
         }
     }
 }
@@ -105,7 +115,7 @@ impl Error for ParseError {
         match *self {
             ParseError::XmlError(ref err) => err.description(),
             ParseError::InvalidValue(ref desc) => desc,
-            ParseError::UnexpectedXml(ref desc) => desc,
+            ParseError::UnexpectedXml { .. } => "unexpected XML content",
         }
     }
 }
@@ -126,9 +136,9 @@ impl Fault {
     /// The `Value` must be a `Value::Struct` with a `faultCode` and `faultString` field.
     ///
     /// Returns `None` if the value isn't a valid `Fault`.
-    pub fn from_value(value: Value) -> Option<Self> {
+    pub fn from_value(value: &Value) -> Option<Self> {
         match value {
-            Value::Struct(map) => {
+            &Value::Struct(ref map) => {
                 match (map.get("faultCode"), map.get("faultString")) {
                     (Some(&Value::Int(fault_code)), Some(&Value::String(ref fault_string))) => {
                         Some(Fault {
