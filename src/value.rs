@@ -1,6 +1,6 @@
 //! Contains the different types of values understood by XML-RPC.
 
-use utils::escape_xml;
+use utils::{escape_xml, format_datetime};
 
 use base64::encode;
 use iso8601::DateTime;
@@ -50,9 +50,8 @@ impl Value {
             Value::Double(d) => {
                 try!(writeln!(fmt, "<double>{}</double>", d));
             }
-            Value::DateTime(_date_time) => {
-                // TODO not easy :(
-                unimplemented!();
+            Value::DateTime(date_time) => {
+                try!(writeln!(fmt, "<dateTime.iso8601>{}</dateTime.iso8601>", format_datetime(&date_time)));
             }
             Value::Base64(ref data) => {
                 try!(writeln!(fmt, "<base64>{}</base64>", encode(data)));
