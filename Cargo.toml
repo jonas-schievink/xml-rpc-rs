@@ -6,7 +6,7 @@ repository = "https://github.com/jonas-schievink/xml-rpc-rs.git"
 keywords = ["xml", "rpc", "remote", "ipc"]
 license = "CC0-1.0"
 name = "xmlrpc"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies]
 base64 = "0.2.0"
