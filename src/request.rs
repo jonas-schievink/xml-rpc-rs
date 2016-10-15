@@ -37,11 +37,9 @@ impl<'a> Request<'a> {
 
     /// Calls the method using the given `Client`.
     ///
-    /// This will send the request to the `/` URL.
-    ///
     /// Returns a `RequestResult` indicating whether the request was sent and processed successfully
     /// (according to the rules of XML-RPC).
-    pub fn call(self, client: Client) -> RequestResult {
+    pub fn call(self, client: Client, url: &str) -> RequestResult {
         use hyper::mime::{Mime, TopLevel, SubLevel, Attr, Value};
 
         // First, build the body XML
@@ -49,7 +47,7 @@ impl<'a> Request<'a> {
         try!(self.write_as_xml(&mut body));
 
         // Send XML-RPC request
-        let mut response = try!(client.post("/")
+        let mut response = try!(client.post(url)
             .header(UserAgent("Rust xmlrpc".to_string()))
             .header(ContentType(Mime(TopLevel::Text, SubLevel::Xml, vec![(Attr::Charset, Value::Utf8)])))
             .body(Body::BufBody(&body, body.len()))
