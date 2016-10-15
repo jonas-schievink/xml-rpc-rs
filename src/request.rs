@@ -39,7 +39,7 @@ impl<'a> Request<'a> {
     ///
     /// Returns a `RequestResult` indicating whether the request was sent and processed successfully
     /// (according to the rules of XML-RPC).
-    pub fn call(self, client: Client, url: &str) -> RequestResult {
+    pub fn call(&self, client: &Client, url: &str) -> RequestResult {
         use hyper::mime::{Mime, TopLevel, SubLevel, Attr, Value};
 
         // First, build the body XML
