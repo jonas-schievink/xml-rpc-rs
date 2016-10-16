@@ -11,7 +11,7 @@ use std::io::{self, Write};
 /// A request to call a procedure.
 pub struct Request<'a> {
     name: &'a str,
-    args: Vec<(&'a str, Value)>,
+    args: Vec<Value>,
 }
 
 impl<'a> Request<'a> {
@@ -26,8 +26,8 @@ impl<'a> Request<'a> {
     }
 
     /// Appends an argument to be passed to the current list of arguments.
-    pub fn arg<T: Into<Value>>(mut self, name: &'a str, value: T) -> Self {
-        self.args.push((name, value.into()));
+    pub fn arg<T: Into<Value>>(mut self, value: T) -> Self {
+        self.args.push(value.into());
 
         Request {
             name: self.name,
@@ -66,7 +66,7 @@ impl<'a> Request<'a> {
         try!(write!(fmt, r#"<methodCall>"#));
         try!(write!(fmt, r#"    <methodName>{}</methodName>"#, escape_xml(&self.name)));
         try!(write!(fmt, r#"    <params>"#));
-        for &(_, ref value) in &self.args {
+        for value in &self.args {
             try!(write!(fmt, r#"        <param>"#));
             try!(value.format(fmt));
             try!(write!(fmt, r#"        </param>"#));
