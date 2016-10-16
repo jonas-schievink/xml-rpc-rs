@@ -191,6 +191,9 @@ impl<'a, R: Read> Parser<'a, R> {
                     }
                     try!(self.expect_close("array"));
                     Value::Array(elements)
+                } else if name == &OwnedName::local("nil") {
+                    try!(self.expect_close("nil"));
+                    Value::Nil
                 } else {
                     // All other types expect raw characters...
                     let data = match try!(self.pull_event()) {
@@ -378,6 +381,12 @@ mod tests {
     fn parses_raw_value_as_string() {
         assert_eq!(read_value("<value>\t  I'm a string!  </value>"),
             Ok(Value::String("\t  I'm a string!  ".into())));
+    }
+
+    #[test]
+    fn parses_nil_values() {
+        assert_eq!(read_value("<value><nil/></value>"), Ok(Value::Nil));
+        assert_eq!(read_value("<value><nil></nil></value>"), Ok(Value::Nil));
     }
 
     #[test]

@@ -30,7 +30,10 @@ pub enum Value {
     /// `<array>`, a list of arbitrary (heterogeneous) values.
     Array(Vec<Value>),
 
-    // TODO Nil
+    /// `</nil>`
+    ///
+    /// Ref: https://web.archive.org/web/20050911054235/http://ontosys.com/xml-rpc/extensions.php
+    Nil
 }
 
 impl Value {
@@ -74,6 +77,9 @@ impl Value {
                 }
                 try!(writeln!(fmt, "</data>"));
                 try!(writeln!(fmt, "</array>"));
+            }
+            Value::Nil => {
+                try!(writeln!(fmt, "<nil/>"));
             }
         }
 
