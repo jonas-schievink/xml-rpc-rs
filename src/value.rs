@@ -100,6 +100,12 @@ impl From<String> for Value {
     }
 }
 
+impl<'a> From<&'a str> for Value {
+    fn from(other: &'a str) -> Self {
+        Value::String(other.to_string())
+    }
+}
+
 impl From<f64> for Value {
     fn from(other: f64) -> Self {
         Value::Double(other)
@@ -128,7 +134,7 @@ mod tests {
     fn escapes_strings() {
         let mut output: Vec<u8> = Vec::new();
 
-        Value::from("<xml>&nbsp;string".to_string()).format(&mut output).unwrap();
+        Value::from("<xml>&nbsp;string").format(&mut output).unwrap();
         assert_eq!(str::from_utf8(&output).unwrap(), "<value>\n<string>&lt;xml>&amp;nbsp;string</string>\n</value>\n");
     }
 
