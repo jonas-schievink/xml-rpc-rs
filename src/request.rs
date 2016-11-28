@@ -62,7 +62,7 @@ impl<'a> Request<'a> {
 
     /// Formats this `Request` as XML.
     pub fn write_as_xml<W: Write>(&self, fmt: &mut W) -> io::Result<()> {
-        try!(write!(fmt, r#"<?xml version="1.1" encoding="utf-8"?>"#));
+        try!(write!(fmt, r#"<?xml version="1.0" encoding="utf-8"?>"#));
         try!(write!(fmt, r#"<methodCall>"#));
         try!(write!(fmt, r#"    <methodName>{}</methodName>"#, escape_xml(&self.name)));
         try!(write!(fmt, r#"    <params>"#));
