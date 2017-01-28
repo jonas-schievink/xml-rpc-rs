@@ -1,7 +1,7 @@
 [package]
 authors = ["Jonas Schievink <jonasschievink@gmail.com>"]
 description = "An XML-RPC implementation for Rust"
-documentation = "https://jonas-schievink.github.io/xml-rpc-rs/xmlrpc/index.html"
+documentation = "https://docs.rs/xmlrpc/"
 repository = "https://github.com/jonas-schievink/xml-rpc-rs.git"
 keywords = ["xml", "rpc", "remote", "ipc"]
 license = "CC0-1.0"
