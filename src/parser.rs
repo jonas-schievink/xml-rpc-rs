@@ -208,6 +208,10 @@ impl<'a, R: Read> Parser<'a, R> {
                         Value::Int(try!(data.parse::<i32>().map_err(|_| {
                             io::Error::new(ErrorKind::Other, format!("invalid value for integer: {}", data))
                         })))
+                    } else if name == &OwnedName::local("i8") {
+                        Value::Int64(try!(data.parse::<i64>().map_err(|_| {
+                            io::Error::new(ErrorKind::Other, format!("invalid value for 64-bit integer: {}", data))
+                        })))
                     } else if name == &OwnedName::local("boolean") {
                         let val = match data.trim() {
                             "0" => false,
@@ -364,6 +368,11 @@ mod tests {
     fn parses_string_value_with_whitespace() {
         assert_eq!(read_value("<value><string>  I'm a string!  </string></value>"),
             Ok(Value::String("  I'm a string!  ".into())));
+    }
+
+    #[test]
+    fn parses_64bit_int() {
+        assert_eq!(read_value("<value><i8>12345</i8></value>"), Ok(Value::Int64(12345)));
     }
 
     #[test]

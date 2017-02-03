@@ -13,6 +13,11 @@ use std::io::{self, Write};
 pub enum Value {
     /// `<i4>` or `<int>`, 32-bit signed integer.
     Int(i32),
+    /// `<i8>`, 64-bit signed integer.
+    ///
+    /// This is a non-standard feature that may not be supported on all servers
+    /// or clients.
+    Int64(i64),
     /// `<boolean>`, 0 == `false`, 1 == `true`.
     Bool(bool),
     /// `<string>`
@@ -43,6 +48,9 @@ impl Value {
         match *self {
             Value::Int(i) => {
                 try!(writeln!(fmt, "<i4>{}</i4>", i));
+            }
+            Value::Int64(i) => {
+                try!(writeln!(fmt, "<i8>{}</i8>", i));
             }
             Value::Bool(b) => {
                 try!(writeln!(fmt, "<boolean>{}</boolean>", if b { "1" } else { "0" }));
