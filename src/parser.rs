@@ -386,7 +386,12 @@ mod tests {
 
     #[test]
     fn parses_array_values() {
-      assert_eq!(read_value("<value><array><data><value><i4>5</i4></value><value><string>a</string></value></data></array></value>"), Ok(Value::Array(vec![Value::Int(5), Value::String("a".into())])));
+        assert_eq!(read_value(r#"
+                <value><array><data>
+                    <value><i4>5</i4></value>
+                    <value><string>a</string></value>
+                </data></array></value>"#),
+            Ok(Value::Array(vec![Value::Int(5), Value::String("a".into())])));
     }
 
     #[test]
