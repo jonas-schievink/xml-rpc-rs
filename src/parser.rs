@@ -414,7 +414,7 @@ mod tests {
 
     #[test]
     fn rejects_value_with_attributes() {
-        // XXX we *should* reject everything with attributes
+        // XXX we *should* reject everything with attributes (right?)
         assert_err(read_value(r#"<value name="ble">\t  I'm a string!  </value>"#));
     }
 }
