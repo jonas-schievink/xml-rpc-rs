@@ -372,7 +372,10 @@ mod tests {
 
     #[test]
     fn parses_64bit_int() {
-        assert_eq!(read_value("<value><i8>12345</i8></value>"), Ok(Value::Int64(12345)));
+        assert_eq!(read_value("<value><i8>12345</i8></value>"),
+            Ok(Value::Int64(12345)));
+        assert_eq!(read_value("<value><i8>-100100100100</i8></value>"),
+            Ok(Value::Int64(-100100100100)));
     }
 
     #[test]
