@@ -1,3 +1,12 @@
+//! An XML-RPC implementation in Rust.
+//!
+//! The `xmlrpc` crate provides a minimal implementation of the [XML-RPC spec][spec].
+//!
+//! [Repo link][repo].
+//!
+//! [spec]: http://xmlrpc.scripting.com/spec.html
+//! [repo]: https://github.com/jonas-schievink/xml-rpc-rs
+
 extern crate base64;
 extern crate hyper;
 extern crate iso8601;
