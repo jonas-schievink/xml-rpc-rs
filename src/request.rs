@@ -16,7 +16,7 @@ use std::collections::BTreeMap;
 #[derive(Clone, Debug)]
 pub struct Request<'a> {
     name: &'a str,
-    args: Vec<Value>,
+    args: Vec<Value<'a>>,
 }
 
 impl<'a> Request<'a> {
@@ -52,7 +52,7 @@ impl<'a> Request<'a> {
     }
 
     /// Appends an argument to be passed to the current list of arguments.
-    pub fn arg<T: Into<Value>>(mut self, value: T) -> Self {
+    pub fn arg<T: Into<Value<'a>>>(mut self, value: T) -> Self {
         self.args.push(value.into());
         self
     }
@@ -126,22 +126,6 @@ impl<'a> Request<'a> {
         write!(fmt, r#"    </params>"#)?;
         write!(fmt, r#"</methodCall>"#)?;
         Ok(())
-    }
-
-    /// Serialize this `Request` into an XML-RPC struct that can be passed to
-    /// the [`system.multicall`](https://mirrors.talideon.com/articles/multicall.html)
-    /// XML-RPC method, specifically a struct with two fields:
-    ///
-    /// * `methodName`: the request name
-    /// * `params`: the request arguments
-    #[deprecated(since="0.11.2", note="use `Request::multicall` instead")]
-    pub fn into_multicall_struct(self) -> Value {
-        let mut multicall_struct: BTreeMap<String, Value> = BTreeMap::new();
-
-        multicall_struct.insert("methodName".into(), self.name.into());
-        multicall_struct.insert("params".into(), Value::Array(self.args));
-
-        Value::Struct(multicall_struct)
     }
 }
 

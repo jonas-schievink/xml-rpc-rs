@@ -14,7 +14,7 @@ use std::collections::BTreeMap;
 /// A response from the server.
 ///
 /// XML-RPC specifies that a call should either return a single `Value`, or a `<fault>`.
-pub type Response = Result<Value, Fault>;
+pub type Response<'a> = Result<Value<'a>, Fault>;
 
 type ParseResult<T> = Result<T, ParseError>;
 

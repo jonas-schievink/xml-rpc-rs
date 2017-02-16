@@ -5,6 +5,7 @@ use utils::{escape_xml, format_datetime};
 use base64::encode;
 use iso8601::DateTime;
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::io::{self, Write};
 
@@ -51,57 +52,69 @@ use std::io::{self, Write};
 /// assert_eq!(person["age"].as_bool(), None);
 /// assert_eq!(person["children"].as_array().unwrap().len(), 2);
 /// ```
-#[derive(Clone, Debug, PartialEq)]
-pub enum Value {
-    /// A 32-bit signed integer (`<i4>` or `<int>`).
+#[derive(Debug, PartialEq, Clone)]
+pub enum Value<'a> {
+    /// `<i4>` or `<int>`, 32-bit signed integer.
     Int(i32),
-    /// A 64-bit signed integer (`<i8>`).
+
+    /// `<i8>`, 64-bit signed integer.
     ///
-    /// This is an XMLRPC extension and may not be supported by all clients / servers.
+    /// This is a non-standard feature that may not be supported on all servers or clients.
     Int64(i64),
-    /// A boolean value (`<boolean>`, 0 == `false`, 1 == `true`).
+
+    /// `<boolean>`, 0 == `false`, 1 == `true`.
     Bool(bool),
-    /// A string (`<string>`).
-    // FIXME zero-copy? `Cow<'static, ..>`?
-    String(String),
-    /// A double-precision IEEE 754 floating point number (`<double>`).
+
+    /// `<string>`, a string of bytes.
+    ///
+    /// According the the [specification][spec], "A string can be used to encode binary data", so
+    /// there is no guarantee that the contents are valid UTF-8, which is required for Rust strings.
+    ///
+    /// For the common case where the value is indeed valid UTF-8, the `Value::as_str` accessor can
+    /// be used. Since success of that method depends on the remote machine, proper error handling
+    /// is necessary.
+    ///
+    /// [spec]: https://web.archive.org/web/20050913062502/http://www.xmlrpc.com/spec
+    String(Cow<'a, [u8]>),
+
+    /// `<double>`
     Double(f64),
-    /// An ISO 8601 formatted date/time value (`<dateTime.iso8601>`).
-    ///
-    /// Note that ISO 8601 is highly ambiguous and allows incomplete date-time specifications. For
-    /// example, servers will frequently leave out timezone information, in which case the client
-    /// must *know* which timezone is used by the server. For this reason, the contained `DateTime`
-    /// struct only contains the raw fields specified by the server, without any real date/time
-    /// functionality like what's offered by the `chrono` crate.
-    ///
-    /// To make matters worse, some clients [don't seem to support][wp-bug] time zone information in
-    /// datetime values. To ensure compatiblity, the xmlrpc crate will try to format datetime values
-    /// like the example given in the [specification] if the timezone offset is zero.
-    ///
-    /// Recommendation: Avoid `DateTime` if possible. A date and time can be specified more
-    /// precisely by formatting it using RFC 3339 and putting it in a [`String`].
-    ///
-    /// [wp-bug]: https://core.trac.wordpress.org/ticket/1633#comment:4
-    /// [specification]: http://xmlrpc.scripting.com/spec.html
-    /// [`String`]: #variant.String
+
+    /// `<dateTime.iso8601>`, an ISO 8601 formatted date/time value.
     DateTime(DateTime),
-    /// Base64-encoded binary data (`<base64>`).
-    Base64(Vec<u8>),
 
-    /// A mapping of named values (`<struct>`).
-    Struct(BTreeMap<String, Value>),
-    /// A list of arbitrary (heterogeneous) values (`<array>`).
-    Array(Vec<Value>),
+    /// `<base64>`, base64-encoded binary data.
+    Base64(Cow<'a, [u8]>),
 
-    /// The empty (Unit) value (`<nil/>`).
+    /// `<struct>`, a mapping of named values.
     ///
-    /// This is an XMLRPC [extension][ext] and may not be supported by all clients / servers.
+    /// Note that XML-RPC [doesn't require][dup] the keys inside a `<struct>` to be
+    /// unique. However, most implementations will ignore all but one of the duplicate entries.
     ///
-    /// [ext]: https://web.archive.org/web/20050911054235/http://ontosys.com/xml-rpc/extensions.php
+    /// To allow non-copy operation and since XML-RPC allows it, this just stores a list of
+    /// key-value pairs.
+    ///
+    /// You most likely don't need the non-copy capabilities and want to make sure that no duplicate
+    /// keys exist, so you're encouraged to use a `BTreeMap` or a `HashMap` and convert to a `Value`
+    /// by using `Into` or `From`.
+    ///
+    /// [dup]: http://xml-rpc.yahoogroups.narkive.com/Br9xMUtQ/duplicate-struct-member-names-allowed
+    Struct(Cow<'a, [(Cow<'a, str>, Value<'a>)]>),
+
+    /// `<array>`, a list of arbitrary (heterogeneous) values.
+    Array(Cow<'a, [Value<'a>]>),
+
+    /// `<nil/>`
+    ///
+    /// This is a non-standard feature that may not be supported on all servers or clients.
+    ///
+    /// Refer to the [specification of `<nil>`][nil] for more information.
+    ///
+    /// [nil]: https://web.archive.org/web/20050911054235/http://ontosys.com/xml-rpc/extensions.php
     Nil,
 }
 
-impl Value {
+impl<'a> Value<'a> {
     /// Formats this `Value` as an XML `<value>` element.
     ///
     /// # Errors
@@ -127,7 +140,11 @@ impl Value {
                 writeln!(fmt, "<double>{}</double>", d)?;
             }
             Value::DateTime(date_time) => {
-                writeln!(fmt, "<dateTime.iso8601>{}</dateTime.iso8601>", format_datetime(&date_time))?;
+                writeln!(
+                    fmt,
+                    "<dateTime.iso8601>{}</dateTime.iso8601>",
+                    format_datetime(&date_time)
+                )?;
             }
             Value::Base64(ref data) => {
                 writeln!(fmt, "<base64>{}</base64>", encode(data))?;
@@ -181,7 +198,7 @@ impl Value {
     pub fn as_i32(&self) -> Option<i32> {
         match *self {
             Value::Int(i) => Some(i),
-            _ => None
+            _ => None,
         }
     }
 
@@ -192,7 +209,7 @@ impl Value {
         match *self {
             Value::Int(i) => Some(i64::from(i)),
             Value::Int64(i) => Some(i),
-            _ => None
+            _ => None,
         }
     }
 
@@ -200,7 +217,7 @@ impl Value {
     pub fn as_bool(&self) -> Option<bool> {
         match *self {
             Value::Bool(b) => Some(b),
-            _ => None
+            _ => None,
         }
     }
 
@@ -208,7 +225,7 @@ impl Value {
     pub fn as_str(&self) -> Option<&str> {
         match *self {
             Value::String(ref s) => Some(s),
-            _ => None
+            _ => None,
         }
     }
 
@@ -217,7 +234,7 @@ impl Value {
     pub fn as_f64(&self) -> Option<f64> {
         match *self {
             Value::Double(d) => Some(d),
-            _ => None
+            _ => None,
         }
     }
 
@@ -225,7 +242,7 @@ impl Value {
     pub fn as_datetime(&self) -> Option<DateTime> {
         match *self {
             Value::DateTime(dt) => Some(dt),
-            _ => None
+            _ => None,
         }
     }
 
@@ -233,7 +250,7 @@ impl Value {
     pub fn as_bytes(&self) -> Option<&[u8]> {
         match *self {
             Value::Base64(ref data) => Some(data),
-            _ => None
+            _ => None,
         }
     }
 
@@ -241,7 +258,7 @@ impl Value {
     pub fn as_struct(&self) -> Option<&BTreeMap<String, Value>> {
         match *self {
             Value::Struct(ref map) => Some(map),
-            _ => None
+            _ => None,
         }
     }
 
@@ -249,56 +266,56 @@ impl Value {
     pub fn as_array(&self) -> Option<&[Value]> {
         match *self {
             Value::Array(ref array) => Some(array),
-            _ => None
+            _ => None,
         }
     }
 }
 
-impl From<i32> for Value {
+impl<'a> From<i32> for Value<'a> {
     fn from(other: i32) -> Self {
         Value::Int(other)
     }
 }
 
-impl From<i64> for Value {
+impl<'a> From<i64> for Value<'a> {
     fn from(other: i64) -> Self {
         Value::Int64(other)
     }
 }
 
-impl From<bool> for Value {
+impl<'a> From<bool> for Value<'a> {
     fn from(other: bool) -> Self {
         Value::Bool(other)
     }
 }
 
-impl From<String> for Value {
+impl<'a> From<String> for Value<'a> {
     fn from(other: String) -> Self {
         Value::String(other)
     }
 }
 
-impl<'a> From<&'a str> for Value {
+impl<'a> From<&'a str> for Value<'a> {
     fn from(other: &'a str) -> Self {
-        Value::String(other.to_string())
+        Value::String(Cow::from(other.as_slice()))
     }
 }
 
-impl From<f64> for Value {
+impl<'a> From<f64> for Value<'a> {
     fn from(other: f64) -> Self {
         Value::Double(other)
     }
 }
 
-impl From<DateTime> for Value {
+impl<'a> From<DateTime> for Value<'a> {
     fn from(other: DateTime) -> Self {
         Value::DateTime(other)
     }
 }
 
-impl From<Vec<u8>> for Value {
-    fn from(other: Vec<u8>) -> Self {
-        Value::Base64(other)
+impl<'a> From<&'a [u8]> for Value<'a> {
+    fn from(other: &'a [u8]) -> Self {
+        Value::Base64(Cow::from(other))
     }
 }
 
@@ -355,14 +372,20 @@ impl Index for usize {
     }
 }
 
-impl<'a, I> Index for &'a I where I: Index + ?Sized {
+impl<'a, I> Index for &'a I
+where
+    I: Index + ?Sized,
+{
     fn get<'v>(&self, value: &'v Value) -> Option<&'v Value> {
         (*self).get(value)
     }
 }
 
-impl<I> ::std::ops::Index<I> for Value where I: Index {
-    type Output = Value;
+impl<'a, I> ::std::ops::Index<I> for Value<'a>
+where
+    I: Index,
+{
+    type Output = Value<'a>;
     fn index(&self, index: I) -> &Self::Output {
         index.get(self).unwrap_or(&Value::Nil)
     }
@@ -371,15 +394,20 @@ impl<I> ::std::ops::Index<I> for Value where I: Index {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::str;
     use std::collections::BTreeMap;
+    use std::str;
 
     #[test]
     fn escapes_strings() {
         let mut output: Vec<u8> = Vec::new();
 
-        Value::from("<xml>&nbsp;string").write_as_xml(&mut output).unwrap();
-        assert_eq!(str::from_utf8(&output).unwrap(), "<value>\n<string>&lt;xml>&amp;nbsp;string</string>\n</value>\n");
+        Value::from("<xml>&nbsp;string")
+            .write_as_xml(&mut output)
+            .unwrap();
+        assert_eq!(
+            str::from_utf8(&output).unwrap(),
+            "<value>\n<string>&lt;xml>&amp;nbsp;string</string>\n</value>\n"
+        );
     }
 
     #[test]
@@ -397,7 +425,10 @@ mod tests {
         let mut map: BTreeMap<String, Value> = BTreeMap::new();
         map.insert("name".to_string(), Value::from("John Doe"));
         map.insert("age".to_string(), Value::from(37));
-        map.insert("children".to_string(), Value::Array(vec![Value::from("Mark"), Value::from("Jennyfer")]));
+        map.insert(
+            "children".to_string(),
+            Value::Array(vec![Value::from("Mark"), Value::from("Jennyfer")]),
+        );
         let value = Value::Struct(map);
 
         assert_eq!(value.get("name"), Some(&Value::from("John Doe")));
