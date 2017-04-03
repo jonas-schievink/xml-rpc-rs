@@ -43,55 +43,55 @@ pub enum Value {
 
 impl Value {
     pub fn format<W: Write>(&self, fmt: &mut W) -> io::Result<()> {
-        try!(writeln!(fmt, "<value>"));
+        writeln!(fmt, "<value>")?;
 
         match *self {
             Value::Int(i) => {
-                try!(writeln!(fmt, "<i4>{}</i4>", i));
+                writeln!(fmt, "<i4>{}</i4>", i)?;
             }
             Value::Int64(i) => {
-                try!(writeln!(fmt, "<i8>{}</i8>", i));
+                writeln!(fmt, "<i8>{}</i8>", i)?;
             }
             Value::Bool(b) => {
-                try!(writeln!(fmt, "<boolean>{}</boolean>", if b { "1" } else { "0" }));
+                writeln!(fmt, "<boolean>{}</boolean>", if b { "1" } else { "0" })?;
             }
             Value::String(ref s) => {
-                try!(writeln!(fmt, "<string>{}</string>", escape_xml(s)));
+                writeln!(fmt, "<string>{}</string>", escape_xml(s))?;
             }
             Value::Double(d) => {
-                try!(writeln!(fmt, "<double>{}</double>", d));
+                writeln!(fmt, "<double>{}</double>", d)?;
             }
             Value::DateTime(date_time) => {
-                try!(writeln!(fmt, "<dateTime.iso8601>{}</dateTime.iso8601>", format_datetime(&date_time)));
+                writeln!(fmt, "<dateTime.iso8601>{}</dateTime.iso8601>", format_datetime(&date_time))?;
             }
             Value::Base64(ref data) => {
-                try!(writeln!(fmt, "<base64>{}</base64>", encode(data)));
+                writeln!(fmt, "<base64>{}</base64>", encode(data))?;
             }
             Value::Struct(ref map) => {
-                try!(writeln!(fmt, "<struct>"));
+                writeln!(fmt, "<struct>")?;
                 for (ref name, ref value) in map {
-                    try!(writeln!(fmt, "<member>"));
-                    try!(writeln!(fmt, "<name>{}</name>", escape_xml(name)));
-                    try!(value.format(fmt));
-                    try!(writeln!(fmt, "</member>"));
+                    writeln!(fmt, "<member>")?;
+                    writeln!(fmt, "<name>{}</name>", escape_xml(name))?;
+                    value.format(fmt)?;
+                    writeln!(fmt, "</member>")?;
                 }
-                try!(writeln!(fmt, "</struct>"));
+                writeln!(fmt, "</struct>")?;
             }
             Value::Array(ref array) => {
-                try!(writeln!(fmt, "<array>"));
-                try!(writeln!(fmt, "<data>"));
+                writeln!(fmt, "<array>")?;
+                writeln!(fmt, "<data>")?;
                 for value in array {
-                    try!(value.format(fmt));
+                    value.format(fmt)?;
                 }
-                try!(writeln!(fmt, "</data>"));
-                try!(writeln!(fmt, "</array>"));
+                writeln!(fmt, "</data>")?;
+                writeln!(fmt, "</array>")?;
             }
             Value::Nil => {
-                try!(writeln!(fmt, "<nil/>"));
+                writeln!(fmt, "<nil/>")?;
             }
         }
 
-        try!(writeln!(fmt, "</value>"));
+        writeln!(fmt, "</value>")?;
         Ok(())
     }
 }

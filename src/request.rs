@@ -44,35 +44,35 @@ impl<'a> Request<'a> {
 
         // First, build the body XML
         let mut body = Vec::new();
-        try!(self.write_as_xml(&mut body));
+        self.write_as_xml(&mut body)?;
 
         // Send XML-RPC request
-        let mut response = try!(client.post(url)
+        let mut response = client.post(url)
             .header(UserAgent("Rust xmlrpc".to_string()))
             .header(ContentType(Mime(TopLevel::Text, SubLevel::Xml, vec![(Attr::Charset, Value::Utf8)])))
             .body(Body::BufBody(&body, body.len()))
-            .send());
+            .send()?;
 
         // FIXME Check that the response headers are correct
 
         // Read the response and parse it
         // FIXME `BufRead`?
-        Ok(try!(parse_response(&mut response)))
+        Ok(parse_response(&mut response)?)
     }
 
     /// Formats this `Request` as XML.
     pub fn write_as_xml<W: Write>(&self, fmt: &mut W) -> io::Result<()> {
-        try!(write!(fmt, r#"<?xml version="1.0" encoding="utf-8"?>"#));
-        try!(write!(fmt, r#"<methodCall>"#));
-        try!(write!(fmt, r#"    <methodName>{}</methodName>"#, escape_xml(&self.name)));
-        try!(write!(fmt, r#"    <params>"#));
+        write!(fmt, r#"<?xml version="1.0" encoding="utf-8"?>"#)?;
+        write!(fmt, r#"<methodCall>"#)?;
+        write!(fmt, r#"    <methodName>{}</methodName>"#, escape_xml(&self.name))?;
+        write!(fmt, r#"    <params>"#)?;
         for value in &self.args {
-            try!(write!(fmt, r#"        <param>"#));
-            try!(value.format(fmt));
-            try!(write!(fmt, r#"        </param>"#));
+            write!(fmt, r#"        <param>"#)?;
+            value.format(fmt)?;
+            write!(fmt, r#"        </param>"#)?;
         }
-        try!(write!(fmt, r#"    </params>"#));
-        try!(write!(fmt, r#"</methodCall>"#));
+        write!(fmt, r#"    </params>"#)?;
+        write!(fmt, r#"</methodCall>"#)?;
         Ok(())
     }
 }
