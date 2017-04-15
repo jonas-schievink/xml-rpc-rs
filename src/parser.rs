@@ -194,6 +194,25 @@ impl<'a, R: Read> Parser<'a, R> {
                 } else if name == &OwnedName::local("nil") {
                     self.expect_close("nil")?;
                     Value::Nil
+                } else if name == &OwnedName::local("string") {
+                    let string = match self.pull_event()? {
+                        XmlEvent::Characters(string) => {
+                            self.expect_close(&name.local_name)?;
+                            string
+                        },
+                        XmlEvent::EndElement { name: ref end_name } if end_name == name => String::new(),
+                        _ => return self.unexpected("expected characters or </string>"),
+                    };
+                    Value::String(string)
+                } else if name == &OwnedName::local("base64") {
+                    let data = match self.pull_event()? {
+                        XmlEvent::Characters(ref string) => base64::decode(string).map_err(|_| {
+                            io::Error::new(ErrorKind::Other, format!("invalid value for base64: {}", string))
+                        })?,
+                        XmlEvent::EndElement { name: ref end_name } if end_name == name => Vec::new(),
+                        _ => return self.unexpected("expected characters or </base64>"),
+                    };
+                    Value::Base64(data)
                 } else {
                     // All other types expect raw characters...
                     let data = match self.pull_event()? {
@@ -220,8 +239,6 @@ impl<'a, R: Read> Parser<'a, R> {
                         };
 
                         Value::Bool(val)
-                    } else if name == &OwnedName::local("string") {
-                        Value::String(data.clone())
                     } else if name == &OwnedName::local("double") {
                         Value::Double(data.parse::<f64>().map_err(|_| {
                             io::Error::new(ErrorKind::Other, format!("invalid value for double: {}", data))
@@ -229,10 +246,6 @@ impl<'a, R: Read> Parser<'a, R> {
                     } else if name == &OwnedName::local("dateTime.iso8601") {
                         Value::DateTime(datetime(&data).map_err(|e| {
                             io::Error::new(ErrorKind::Other, format!("invalid value for dateTime.iso8601: {} ({})", data, e))
-                        })?)
-                    } else if name == &OwnedName::local("base64") {
-                        Value::Base64(base64::decode(&data).map_err(|_| {
-                            io::Error::new(ErrorKind::Other, format!("invalid value for base64: {}", data))
                         })?)
                     } else {
                         return self.unexpected("invalid <value> content");
@@ -379,9 +392,18 @@ mod tests {
     }
 
     #[test]
+    fn parses_int_with_plus_sign() {
+        // "You can include a plus or minus at the beginning of a string of numeric characters."
+        assert_eq!(read_value("<value><int>+1234</int></value>"),
+            Ok(Value::Int(1234)));
+    }
+
+    #[test]
     fn parses_date_values() {
         assert_ok(read_value("<value><dateTime.iso8601>2015-02-18T23:16:09Z</dateTime.iso8601></value>"));
         assert_ok(read_value("<value><dateTime.iso8601>19980717T14:08:55</dateTime.iso8601></value>"));
+        assert_err(read_value("<value><dateTime.iso8601></dateTime.iso8601></value>"));
+        assert_err(read_value("<value><dateTime.iso8601>ILLEGAL VALUE :(</dateTime.iso8601></value>"));
     }
 
     #[test]
@@ -398,18 +420,36 @@ mod tests {
     fn parses_raw_value_as_string() {
         assert_eq!(read_value("<value>\t  I'm a string!  </value>"),
             Ok(Value::String("\t  I'm a string!  ".into())));
+        // FIXME: Are empty <value>-tags also supposed to be parsed as empty strings?
     }
 
     #[test]
     fn parses_nil_values() {
         assert_eq!(read_value("<value><nil/></value>"), Ok(Value::Nil));
         assert_eq!(read_value("<value><nil></nil></value>"), Ok(Value::Nil));
+        assert_err(read_value("<value><nil>ILLEGAL</nil></value>"));
     }
 
     #[test]
     fn unescapes_values() {
         assert_eq!(read_value("<value><string>abc&lt;abc&amp;abc</string></value>"),
             Ok(Value::String("abc<abc&abc".into())));
+    }
+
+    #[test]
+    fn parses_empty_string() {
+        assert_eq!(read_value("<value><string></string></value>"),
+            Ok(Value::String(String::new())));
+        assert_eq!(read_value("<value><string/></value>"),
+            Ok(Value::String(String::new())));
+    }
+
+    #[test]
+    fn parses_empty_base64() {
+        assert_eq!(read_value("<value><base64></base64></value>"),
+            Ok(Value::Base64(Vec::new())));
+        assert_eq!(read_value("<value><base64/></value>"),
+            Ok(Value::Base64(Vec::new())));
     }
 
     #[test]
