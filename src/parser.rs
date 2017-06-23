@@ -29,6 +29,8 @@ impl<'a, R: Read> Parser<'a, R> {
     }
 
     /// Reads an `XmlEvent` from a reader, disposing events we want to ignore.
+    ///
+    /// When encountering a new element, returns an `Err` if it has any attributes.
     fn pull_event(&mut self) -> ParseResult<XmlEvent> {
         loop {
             let event = self.reader.next()?;
@@ -36,27 +38,27 @@ impl<'a, R: Read> Parser<'a, R> {
                 XmlEvent::StartDocument { .. }
                 | XmlEvent::Comment(_)
                 | XmlEvent::Whitespace(_)
-                | XmlEvent::ProcessingInstruction { .. } => {},
-                XmlEvent::StartElement { .. }
-                | XmlEvent::EndElement { .. }
+                | XmlEvent::ProcessingInstruction { .. } => continue,   // skip these
+                XmlEvent::StartElement { ref attributes, ref name, .. } => {
+                    if !attributes.is_empty() {
+                        return self.unexpected(format!("expected tag <{}> without attributes", name));
+                    }
+                },
+                XmlEvent::EndElement { .. }
                 | XmlEvent::EndDocument
                 | XmlEvent::CData(_)
-                | XmlEvent::Characters(_) => {
-                    return Ok(event);
-                }
+                | XmlEvent::Characters(_) => {}
             }
+
+            return Ok(event);
         }
     }
 
     /// Expects an opening tag like `<tag>` without attributes (and a local name without namespaces).
     fn expect_open(&mut self, tag: &str) -> ParseResult<()> {
         match self.pull_event()? {
-            XmlEvent::StartElement { ref name, ref attributes, .. }
+            XmlEvent::StartElement { ref name, .. }
             if name == &OwnedName::local(tag) => {
-                if !attributes.is_empty() {
-                    return self.unexpected(format!("unexpected attributes in <{}>", tag));
-                }
-
                 Ok(())
             }
             _ => return self.unexpected(format!("expected <{}>", tag)),
@@ -92,11 +94,7 @@ impl<'a, R: Read> Parser<'a, R> {
 
         // <fault> / <params>
         match self.pull_event()? {
-            XmlEvent::StartElement { ref name, ref attributes, .. } => {
-                if !attributes.is_empty() {
-                    return self.unexpected("unexpected attributes");
-                }
-
+            XmlEvent::StartElement { ref name, .. } => {
                 if name == &OwnedName::local("fault") {
                     let value = self.parse_value()?;
                     let fault = Fault::from_value(&value).ok_or_else(|| {
@@ -139,21 +137,14 @@ impl<'a, R: Read> Parser<'a, R> {
 
         // Raw string or specific type tag
         value = match self.pull_event()? {
-            XmlEvent::StartElement { ref name, ref attributes, .. } => {
-                if !attributes.is_empty() {
-                    return self.unexpected(format!("unexpected attributes in <{}>", name));
-                }
-
+            XmlEvent::StartElement { ref name, .. } => {
                 if name == &OwnedName::local("struct") {
                     let mut members = BTreeMap::new();
                     loop {
                         match self.pull_event()? {
                             XmlEvent::EndElement { ref name } if name == &OwnedName::local("struct") => break,
-                            XmlEvent::StartElement { ref name, ref attributes, .. } if name == &OwnedName::local("member") => {
+                            XmlEvent::StartElement { ref name, .. } if name == &OwnedName::local("member") => {
                                 // <member>
-                                if !attributes.is_empty() {
-                                    return self.unexpected(format!("unexpected attributes in <{}>", name));
-                                }
 
                                 // <name>NAME</name>
                                 self.expect_open("name")?;
@@ -283,18 +274,34 @@ mod tests {
         Parser::new(&mut xml.as_bytes()).parse_value()
     }
 
+    /// Test helper function that will panic with the `Err` if a `Result` is not an `Ok`.
     fn assert_ok<T: Debug, E: Debug>(result: Result<T, E>) {
         match result {
-            Ok(t) => println!("assert_ok successful on Ok: {:?}", t),
+            Ok(_) => {},
             Err(e) => panic!("assert_ok called on Err value: {:?}", e),
         }
     }
 
+    /// Test helper function that will panic with the `Ok` if a `Result` is not an `Err`.
     fn assert_err<T: Debug, E: Debug>(result: Result<T, E>) {
         match result {
             Ok(t) => panic!("assert_err called on Ok value: {:?}", t),
-            Err(e) => println!("assert_err successful on Err: {:?}", e),
+            Err(_) => {},
         }
+    }
+
+    #[test]
+    fn parses_response() {
+        assert_ok(read_response(r##"
+<?xml version="1.0"?>
+<methodResponse>
+    <params>
+        <param>
+            <value>teststring</value>
+        </param>
+    </params>
+</methodResponse>
+"##));
     }
 
     #[test]
@@ -325,6 +332,10 @@ mod tests {
 
     #[test]
     fn ignores_additional_fault_fields() {
+        // FIXME: This is wrong behaviour:
+        // "A <fault> struct may not contain members other than those specified."
+        // So this should be rejected by the parser.
+
         assert_eq!(read_response(r##"
 <?xml version="1.0"?>
 <methodResponse>
@@ -357,7 +368,7 @@ mod tests {
     fn rejects_invalid_faults() {
         // Make sure to reject type errors in <fault>s - They're specified to contain specifically
         // typed fields.
-        assert!(read_response(r##"
+        assert_err(read_response(r##"
 <?xml version="1.0"?>
 <methodResponse>
    <fault>
@@ -374,7 +385,26 @@ mod tests {
             </struct>
          </value>
       </fault>
-   </methodResponse>"##).is_err());
+   </methodResponse>"##));
+
+        assert_err(read_response(r##"
+<?xml version="1.0"?>
+<methodResponse>
+   <fault>
+      <value>
+         <struct>
+            <member>
+               <name>faultCode</name>
+               <value><int>4</int></value>
+               </member>
+            <member>
+               <name>faultString</name>
+               <value><base64>I'm not a string!</base64></value>
+               </member>
+            </struct>
+         </value>
+      </fault>
+   </methodResponse>"##));
     }
 
     #[test]
@@ -453,8 +483,58 @@ mod tests {
     }
 
     #[test]
-    fn rejects_value_with_attributes() {
-        // XXX we *should* reject everything with attributes (right?)
+    fn rejects_attributes() {
         assert_err(read_value(r#"<value name="ble">\t  I'm a string!  </value>"#));
+
+        assert_err(read_response(r##"
+<?xml version="1.0"?>
+<methodResponse invalid="1">
+    <params>
+        <param>
+            <value>teststring</value>
+        </param>
+    </params>
+</methodResponse>
+"##));
+        assert_err(read_response(r##"
+<?xml version="1.0"?>
+<methodResponse>
+    <params invalid="1">
+        <param>
+            <value>teststring</value>
+        </param>
+    </params>
+</methodResponse>
+"##));
+        assert_err(read_response(r##"
+<?xml version="1.0"?>
+<methodResponse>
+    <params>
+        <param invalid="1">
+            <value>teststring</value>
+        </param>
+    </params>
+</methodResponse>
+"##));
+        assert_err(read_response(r##"
+<?xml version="1.0"?>
+<methodResponse>
+    <params>
+        <param>
+            <value invalid="1">teststring</value>
+        </param>
+    </params>
+</methodResponse>
+"##));
+        assert_err(read_response(r##"
+<?xml version="1.0"?>
+<methodResponse>
+    <params>
+        <param>
+            <value><int invalid="1">4</int></value>
+        </param>
+    </params>
+</methodResponse>
+"##));
     }
 }
