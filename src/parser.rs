@@ -231,7 +231,7 @@ impl<'a, R: Read> Parser<'a, R> {
                             invalid_value("i8", data)
                         })?)
                     } else if name == &OwnedName::local("boolean") {
-                        let val = match data.trim() {   // FIXME Don't trim this!
+                        let val = match &*data {
                             "0" => false,
                             "1" => true,
                             _ => return Err(invalid_value("boolean", data)),
