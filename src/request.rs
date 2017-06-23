@@ -3,7 +3,7 @@ use parser::parse_response;
 use error::RequestError;
 use utils::escape_xml;
 
-use hyper::client::{Client, Body};
+use hyper::client::{Client, Body, RequestBuilder};
 use hyper::header::{ContentType, UserAgent};
 
 use std::io::{self, Write};
@@ -40,6 +40,14 @@ impl<'a> Request<'a> {
     /// Returns a `RequestResult` indicating whether the request was sent and processed successfully
     /// (according to the rules of XML-RPC).
     pub fn call(&self, client: &Client, url: &str) -> RequestResult {
+        self.call_with(client, url, |b| b)
+    }
+
+    /// Calls the method, giving the closure a chance to amend the hyper
+    /// `RequestBuilder` before sending.
+    pub fn call_with<F>(&self, client: &Client, url: &str, cb: F) -> RequestResult
+        where F: Fn(RequestBuilder) -> RequestBuilder
+    {
         use hyper::mime::{Mime, TopLevel, SubLevel, Attr, Value};
 
         // First, build the body XML
@@ -47,11 +55,13 @@ impl<'a> Request<'a> {
         self.write_as_xml(&mut body)?;
 
         // Send XML-RPC request
-        let mut response = client.post(url)
+        let builder = client.post(url)
             .header(UserAgent("Rust xmlrpc".to_string()))
-            .header(ContentType(Mime(TopLevel::Text, SubLevel::Xml, vec![(Attr::Charset, Value::Utf8)])))
-            .body(Body::BufBody(&body, body.len()))
-            .send()?;
+            .header(ContentType(Mime(TopLevel::Text, SubLevel::Xml,
+                                     vec![(Attr::Charset, Value::Utf8)])))
+            .body(Body::BufBody(&body, body.len()));
+        let builder = cb(builder);
+        let mut response = builder.send()?;
 
         // FIXME Check that the response headers are correct
 
