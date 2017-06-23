@@ -41,7 +41,7 @@ impl<'a, R: Read> Parser<'a, R> {
                 | XmlEvent::ProcessingInstruction { .. } => continue,   // skip these
                 XmlEvent::StartElement { ref attributes, ref name, .. } => {
                     if !attributes.is_empty() {
-                        return self.unexpected(format!("expected tag <{}> without attributes", name));
+                        return self.expected(format!("tag <{}> without attributes", name));
                     }
                 },
                 XmlEvent::EndElement { .. }
@@ -61,7 +61,7 @@ impl<'a, R: Read> Parser<'a, R> {
             if name == &OwnedName::local(tag) => {
                 Ok(())
             }
-            _ => return self.unexpected(format!("expected <{}>", tag)),
+            _ => return self.expected(format!("<{}>", tag)),
         }
     }
 
@@ -71,12 +71,12 @@ impl<'a, R: Read> Parser<'a, R> {
             XmlEvent::EndElement { ref name } if name == &OwnedName::local(tag) => {
                 Ok(())
             }
-            _ => self.unexpected(format!("expected </{}>", tag)),
+            _ => self.expected(format!("</{}>", tag)),
         }
     }
 
     /// Builds and returns an `Err(UnexpectedXml)`.
-    fn unexpected<T, E: ToString>(&self, expected: E) -> ParseResult<T> {
+    fn expected<T, E: ToString>(&self, expected: E) -> ParseResult<T> {
         let expected = expected.to_string();
         let position = self.reader.position();
 
@@ -111,10 +111,10 @@ impl<'a, R: Read> Parser<'a, R> {
                     // </param>
                     self.expect_close("param")?;
                 } else {
-                    return self.unexpected(format!("expected <fault> or <params>, got {}", name));
+                    return self.expected(format!("<fault> or <params>, got {}", name));
                 }
             }
-            _ => return self.unexpected("expected <fault> or <params>"),
+            _ => return self.expected("<fault> or <params>"),
         }
 
         Ok(response)
@@ -150,7 +150,7 @@ impl<'a, R: Read> Parser<'a, R> {
                                 self.expect_open("name")?;
                                 let name = match self.pull_event()? {
                                     XmlEvent::Characters(string) => string,
-                                    _ => return self.unexpected("expected CDATA"),
+                                    _ => return self.expected("characters"),
                                 };
                                 self.expect_close("name")?;
 
@@ -162,7 +162,7 @@ impl<'a, R: Read> Parser<'a, R> {
 
                                 members.insert(name, value);
                             }
-                            _ => return self.unexpected("expected </struct> or <member>"),
+                            _ => return self.expected("</struct> or <member>"),
                         }
                     }
 
@@ -177,7 +177,7 @@ impl<'a, R: Read> Parser<'a, R> {
                                 elements.push(self.parse_value_inner()?);
                                 self.expect_close("value")?;
                             }
-                            _event => return self.unexpected("expected </data> or <value>")
+                            _event => return self.expected("</data> or <value>")
                         }
                     }
                     self.expect_close("array")?;
@@ -192,7 +192,7 @@ impl<'a, R: Read> Parser<'a, R> {
                             string
                         },
                         XmlEvent::EndElement { name: ref end_name } if end_name == name => String::new(),
-                        _ => return self.unexpected("expected characters or </string>"),
+                        _ => return self.expected("characters or </string>"),
                     };
                     Value::String(string)
                 } else if name == &OwnedName::local("base64") {
@@ -201,14 +201,14 @@ impl<'a, R: Read> Parser<'a, R> {
                             io::Error::new(ErrorKind::Other, format!("invalid value for base64: {}", string))
                         })?,
                         XmlEvent::EndElement { name: ref end_name } if end_name == name => Vec::new(),
-                        _ => return self.unexpected("expected characters or </base64>"),
+                        _ => return self.expected("characters or </base64>"),
                     };
                     Value::Base64(data)
                 } else {
                     // All other types expect raw characters...
                     let data = match self.pull_event()? {
                         XmlEvent::Characters(string) => string,
-                        _ => return self.unexpected("expected characters"),
+                        _ => return self.expected("characters"),
                     };
 
                     // ...and a corresponding close tag
@@ -239,14 +239,14 @@ impl<'a, R: Read> Parser<'a, R> {
                             io::Error::new(ErrorKind::Other, format!("invalid value for dateTime.iso8601: {} ({})", data, e))
                         })?)
                     } else {
-                        return self.unexpected("invalid <value> content");
+                        return self.expected("valid type tag or characters");
                     }
                 }
             }
             XmlEvent::Characters(string) => {
                 Value::String(string)
             }
-            _ => return self.unexpected("invalid <value> content"),
+            _ => return self.expected("type tag or characters"),
         };
 
         Ok(value)
@@ -536,5 +536,29 @@ mod tests {
     </params>
 </methodResponse>
 "##));
+    }
+
+    #[test]
+    fn error_messages() {
+        fn errstr(value: &str) -> String {
+            read_value(value).unwrap_err().to_string()
+        }
+
+        assert_eq!(
+            errstr(r#"<value name="ble">\t  I'm a string!  </value>"#),
+            "unexpected XML at 1:1 (expected tag <value> without attributes)"
+        );
+
+        // FIXME: This one could use some improvement:
+        assert_eq!(
+            errstr(r#"<value><SURPRISE></SURPRISE></value>"#),
+            "unexpected XML at 1:18 (expected characters)"
+        );
+
+        // FIXME: This one uses the wrong variant! Stop using io::Error for that.
+        assert_eq!(
+            errstr(r#"<value><int>bla</int></value>"#),
+            "malformed XML: 1:1 invalid value for integer: bla"
+        );
     }
 }

@@ -108,7 +108,7 @@ impl Display for ParseError {
                 ref expected,
                 ref position,
             } => {
-                write!(fmt, "{} at {}", expected, position)
+                write!(fmt, "unexpected XML at {} (expected {})", position, expected)
             }
         }
     }
