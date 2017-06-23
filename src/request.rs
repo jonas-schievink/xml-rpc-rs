@@ -1,6 +1,6 @@
 use {Value, Response};
 use parser::parse_response;
-use error::{ParseError, RequestError};
+use error::RequestError;
 use utils::escape_xml;
 
 use hyper::client::{Client, Body, RequestBuilder};
@@ -67,7 +67,7 @@ impl<'a> Request<'a> {
         // FIXME Check that the response headers are correct
         if response.status != StatusCode::Ok {
             let st = response.status_raw();
-            Err(ParseError::HttpStatus(format!("{} {}", st.0, st.1)).into())
+            Err(RequestError::HttpStatus(format!("{} {}", st.0, st.1)))
         } else {
             // Read the response and parse it
             // FIXME `BufRead`?

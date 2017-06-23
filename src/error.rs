@@ -20,6 +20,9 @@ pub enum RequestError {
     /// An HTTP communication error occurred while sending the request or receiving the response.
     HyperError(HyperError),
 
+    /// The HTTP status code did not indicate success.
+    HttpStatus(String),
+
     /// The response could not be parsed. This can happen when the server doesn't correctly
     /// implement the XML-RPC spec.
     ParseError(ParseError),
@@ -49,6 +52,7 @@ impl Display for RequestError {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         match *self {
             RequestError::HyperError(ref err) => write!(fmt, "HTTP error: {}", err),
+            RequestError::HttpStatus(ref err) => write!(fmt, "HTTP status: {}", err),
             RequestError::ParseError(ref err) => write!(fmt, "parse error: {}", err),
         }
     }
@@ -58,6 +62,7 @@ impl Error for RequestError {
     fn description(&self) -> &str {
         match *self {
             RequestError::HyperError(ref err) => err.description(),
+            RequestError::HttpStatus(ref err) => &err,
             RequestError::ParseError(ref err) => err.description(),
         }
     }
@@ -66,9 +71,6 @@ impl Error for RequestError {
 /// Describes possible error that can occur when parsing a `Response`.
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
-    /// The HTTP status code did not indicate success.
-    HttpStatus(String),
-
     /// Error while parsing (malformed?) XML.
     XmlError(XmlError),
 
@@ -108,7 +110,6 @@ impl From<io::Error> for ParseError {
 impl Display for ParseError {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         match *self {
-            ParseError::HttpStatus(ref err) => write!(fmt, "HTTP status: {}", err),
             ParseError::XmlError(ref err) => write!(fmt, "malformed XML: {}", err),
             ParseError::InvalidValue {
                 for_type,
@@ -128,7 +129,6 @@ impl Display for ParseError {
 impl Error for ParseError {
     fn description(&self) -> &str {
         match *self {
-            ParseError::HttpStatus(ref err) => err,
             ParseError::XmlError(ref err) => err.description(),
             ParseError::InvalidValue { .. } => "invalid value for type",
             ParseError::UnexpectedXml { .. } => "unexpected XML content",
