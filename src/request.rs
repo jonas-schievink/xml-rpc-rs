@@ -1,10 +1,11 @@
 use {Value, Response};
 use parser::parse_response;
-use error::RequestError;
+use error::{ParseError, RequestError};
 use utils::escape_xml;
 
 use hyper::client::{Client, Body, RequestBuilder};
 use hyper::header::{ContentType, UserAgent};
+use hyper::status::StatusCode;
 
 use std::io::{self, Write};
 
@@ -64,10 +65,14 @@ impl<'a> Request<'a> {
         let mut response = builder.send()?;
 
         // FIXME Check that the response headers are correct
-
-        // Read the response and parse it
-        // FIXME `BufRead`?
-        Ok(parse_response(&mut response)?)
+        if response.status != StatusCode::Ok {
+            let st = response.status_raw();
+            Err(ParseError::HttpStatus(format!("{} {}", st.0, st.1)).into())
+        } else {
+            // Read the response and parse it
+            // FIXME `BufRead`?
+            Ok(parse_response(&mut response)?)
+        }
     }
 
     /// Formats this `Request` as XML.
