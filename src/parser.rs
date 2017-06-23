@@ -40,12 +40,19 @@ impl<'a, R: Read> Parser<'a, R> {
                 | XmlEvent::Whitespace(_)
                 | XmlEvent::ProcessingInstruction { .. } => continue,   // skip these
                 XmlEvent::StartElement { ref attributes, ref name, .. } => {
+                    if name.namespace.is_some() || name.prefix.is_some() {
+                        return self.expected("tag without namespace or prefix");
+                    }
                     if !attributes.is_empty() {
                         return self.expected(format!("tag <{}> without attributes", name));
                     }
                 },
-                XmlEvent::EndElement { .. }
-                | XmlEvent::EndDocument
+                XmlEvent::EndElement { ref name } => {
+                    if name.namespace.is_some() || name.prefix.is_some() {
+                        return self.expected("tag without namespace or prefix");
+                    }
+                },
+                XmlEvent::EndDocument
                 | XmlEvent::CData(_)
                 | XmlEvent::Characters(_) => {}
             }
@@ -84,6 +91,15 @@ impl<'a, R: Read> Parser<'a, R> {
             expected: expected,
             position: position,
         })
+    }
+
+    fn invalid_value(&self, for_type: &'static str, value: String) -> ParseError {
+        // FIXME: It might be neat to preserve the original error as the cause
+        ParseError::InvalidValue {
+            for_type: for_type,
+            found: value,
+            position: self.reader.position(),
+        }
     }
 
     fn parse_response(&mut self) -> ParseResult<Response> {
@@ -133,121 +149,129 @@ impl<'a, R: Read> Parser<'a, R> {
     }
 
     fn parse_value_inner(&mut self) -> ParseResult<Value> {
-        fn invalid_value(for_type: &'static str, value: String) -> ParseError {
-            // FIXME: It might be neat to preserve the original error as the cause
-            ParseError::InvalidValue {
-                for_type: for_type,
-                found: value,
-            }
-        }
-
         let value: Value;
 
         // Raw string or specific type tag
         value = match self.pull_event()? {
             XmlEvent::StartElement { ref name, .. } => {
-                if name == &OwnedName::local("struct") {
-                    let mut members = BTreeMap::new();
-                    loop {
-                        match self.pull_event()? {
-                            XmlEvent::EndElement { ref name } if name == &OwnedName::local("struct") => break,
-                            XmlEvent::StartElement { ref name, .. } if name == &OwnedName::local("member") => {
-                                // <member>
+                let name = &*name.local_name;
+                match name {
+                    "struct" => {
+                        let mut members = BTreeMap::new();
+                        loop {
+                            match self.pull_event()? {
+                                XmlEvent::EndElement { ref name } if name == &OwnedName::local("struct") => break,
+                                XmlEvent::StartElement { ref name, .. } if name == &OwnedName::local("member") => {
+                                    // <member>
 
-                                // <name>NAME</name>
-                                self.expect_open("name")?;
-                                let name = match self.pull_event()? {
-                                    XmlEvent::Characters(string) => string,
-                                    _ => return self.expected("characters"),
-                                };
-                                self.expect_close("name")?;
+                                    // <name>NAME</name>
+                                    self.expect_open("name")?;
+                                    let name = match self.pull_event()? {
+                                        XmlEvent::Characters(string) => string,
+                                        _ => return self.expected("characters"),
+                                    };
+                                    self.expect_close("name")?;
 
-                                // Value
-                                let value = self.parse_value()?;
+                                    // Value
+                                    let value = self.parse_value()?;
 
-                                // </member>
-                                self.expect_close("member")?;
+                                    // </member>
+                                    self.expect_close("member")?;
 
-                                members.insert(name, value);
+                                    members.insert(name, value);
+                                }
+                                _ => return self.expected("</struct> or <member>"),
                             }
-                            _ => return self.expected("</struct> or <member>"),
                         }
-                    }
 
-                    Value::Struct(members)
-                } else if name == &OwnedName::local("array") {
-                    let mut elements: Vec<Value> = Vec::new();
-                    self.expect_open("data")?;
-                    loop {
-                        match self.pull_event()? {
-                            XmlEvent::EndElement { ref name } if name == &OwnedName::local("data") => break,
-                            XmlEvent::StartElement { ref name, .. } if name == &OwnedName::local("value") => {
-                                elements.push(self.parse_value_inner()?);
-                                self.expect_close("value")?;
+                        Value::Struct(members)
+                    }
+                    "array" => {
+                        let mut elements: Vec<Value> = Vec::new();
+                        self.expect_open("data")?;
+                        loop {
+                            match self.pull_event()? {
+                                XmlEvent::EndElement { ref name } if name == &OwnedName::local("data") => break,
+                                XmlEvent::StartElement { ref name, .. } if name == &OwnedName::local("value") => {
+                                    elements.push(self.parse_value_inner()?);
+                                    self.expect_close("value")?;
+                                }
+                                _event => return self.expected("</data> or <value>")
                             }
-                            _event => return self.expected("</data> or <value>")
                         }
+                        self.expect_close("array")?;
+                        Value::Array(elements)
                     }
-                    self.expect_close("array")?;
-                    Value::Array(elements)
-                } else if name == &OwnedName::local("nil") {
-                    self.expect_close("nil")?;
-                    Value::Nil
-                } else if name == &OwnedName::local("string") {
-                    let string = match self.pull_event()? {
-                        XmlEvent::Characters(string) => {
-                            self.expect_close(&name.local_name)?;
-                            string
-                        },
-                        XmlEvent::EndElement { name: ref end_name } if end_name == name => String::new(),
-                        _ => return self.expected("characters or </string>"),
-                    };
-                    Value::String(string)
-                } else if name == &OwnedName::local("base64") {
-                    let data = match self.pull_event()? {
-                        XmlEvent::Characters(ref string) => base64::decode(string).map_err(|_| {
-                            invalid_value("base64", string.to_string())
-                        })?,
-                        XmlEvent::EndElement { name: ref end_name } if end_name == name => Vec::new(),
-                        _ => return self.expected("characters or </base64>"),
-                    };
-                    Value::Base64(data)
-                } else {
-                    // All other types expect raw characters...
-                    let data = match self.pull_event()? {
-                        XmlEvent::Characters(string) => string,
-                        _ => return self.expected("characters"),
-                    };
-
-                    // ...and a corresponding close tag
-                    self.expect_close(&name.local_name)?;
-
-                    if name == &OwnedName::local("i4") || name == &OwnedName::local("int") {
-                        Value::Int(data.parse::<i32>().map_err(|_| {
-                            invalid_value("integer", data)
-                        })?)
-                    } else if name == &OwnedName::local("i8") {
-                        Value::Int64(data.parse::<i64>().map_err(|_| {
-                            invalid_value("i8", data)
-                        })?)
-                    } else if name == &OwnedName::local("boolean") {
-                        let val = match &*data {
-                            "0" => false,
-                            "1" => true,
-                            _ => return Err(invalid_value("boolean", data)),
+                    "nil" => {
+                        self.expect_close("nil")?;
+                        Value::Nil
+                    }
+                    "string" => {
+                        let string = match self.pull_event()? {
+                            XmlEvent::Characters(string) => {
+                                self.expect_close(name)?;
+                                string
+                            },
+                            XmlEvent::EndElement { name: ref end_name }
+                                if end_name.local_name == name => String::new(),
+                            _ => return self.expected("characters or </string>"),
+                        };
+                        Value::String(string)
+                    }
+                    "base64" => {
+                        let data = match self.pull_event()? {
+                            XmlEvent::Characters(ref string) => base64::decode(string).map_err(|_| {
+                                self.invalid_value("base64", string.to_string())
+                            })?,
+                            XmlEvent::EndElement { name: ref end_name }
+                                if end_name.local_name == name => Vec::new(),
+                            _ => return self.expected("characters or </base64>"),
+                        };
+                        Value::Base64(data)
+                    }
+                    _ => {
+                        // All other types expect raw characters...
+                        let data = match self.pull_event()? {
+                            XmlEvent::Characters(string) => string,
+                            _ => return self.expected("characters"),
                         };
 
-                        Value::Bool(val)
-                    } else if name == &OwnedName::local("double") {
-                        Value::Double(data.parse::<f64>().map_err(|_| {
-                            invalid_value("double", data)
-                        })?)
-                    } else if name == &OwnedName::local("dateTime.iso8601") {
-                        Value::DateTime(datetime(&data).map_err(|_| {
-                            invalid_value("dateTime.iso8601", data)
-                        })?)
-                    } else {
-                        return self.expected("valid type tag or characters");
+                        let value = match name {
+                            "i4" | "int" => {
+                                Value::Int(data.parse::<i32>().map_err(|_| {
+                                    self.invalid_value("integer", data)
+                                })?)
+                            }
+                            "i8" => {
+                                Value::Int64(data.parse::<i64>().map_err(|_| {
+                                    self.invalid_value("i8", data)
+                                })?)
+                            }
+                            "boolean" => {
+                                let val = match &*data {
+                                    "0" => false,
+                                    "1" => true,
+                                    _ => return Err(self.invalid_value("boolean", data)),
+                                };
+                                Value::Bool(val)
+                            }
+                            "double" => {
+                                Value::Double(data.parse::<f64>().map_err(|_| {
+                                    self.invalid_value("double", data)
+                                })?)
+                            }
+                            "dateTime.iso8601" => {
+                                Value::DateTime(datetime(&data).map_err(|_| {
+                                    self.invalid_value("dateTime.iso8601", data)
+                                })?)
+                            }
+                            _ => return self.expected("valid type tag or characters"),
+                        };
+
+                        // ...and a corresponding close tag
+                        self.expect_close(name)?;
+
+                        value
                     }
                 }
             }
@@ -565,7 +589,7 @@ mod tests {
 
         assert_eq!(
             errstr(r#"<value><int>bla</int></value>"#),
-            "invalid value for type \'integer\': bla"
+            "invalid value for type \'integer\' at 1:13: bla"
         );
     }
 }

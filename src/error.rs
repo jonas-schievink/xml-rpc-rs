@@ -80,6 +80,8 @@ pub enum ParseError {
         for_type: &'static str,
         /// The value we encountered, as a string.
         found: String,
+        /// The position of the invalid value inside the XML document.
+        position: TextPosition,
     },
 
     /// Found an unexpected tag, attribute, etc.
@@ -111,7 +113,8 @@ impl Display for ParseError {
             ParseError::InvalidValue {
                 for_type,
                 ref found,
-            } => write!(fmt, "invalid value for type '{}': {}", for_type, found),
+                ref position,
+            } => write!(fmt, "invalid value for type '{}' at {}: {}", for_type, position, found),
             ParseError::UnexpectedXml {
                 ref expected,
                 ref position,
