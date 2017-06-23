@@ -104,7 +104,7 @@ impl Display for ParseError {
                 ref expected,
                 ref position,
             } => {
-                write!(fmt, "expected {} at {}", expected, position)
+                write!(fmt, "{} at {}", expected, position)
             }
         }
     }
