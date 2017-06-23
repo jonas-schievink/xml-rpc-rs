@@ -66,6 +66,9 @@ impl Error for RequestError {
 /// Describes possible error that can occur when parsing a `Response`.
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
+    /// The HTTP status code did not indicate success.
+    HttpStatus(String),
+
     /// Error while parsing (malformed?) XML.
     XmlError(XmlError),
 
@@ -98,6 +101,7 @@ impl From<io::Error> for ParseError {
 impl Display for ParseError {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         match *self {
+            ParseError::HttpStatus(ref err) => write!(fmt, "HTTP status: {}", err),
             ParseError::XmlError(ref err) => write!(fmt, "malformed XML: {}", err),
             ParseError::InvalidValue(ref desc) => write!(fmt, "invalid value: {}", desc),
             ParseError::UnexpectedXml {
@@ -113,6 +117,7 @@ impl Display for ParseError {
 impl Error for ParseError {
     fn description(&self) -> &str {
         match *self {
+            ParseError::HttpStatus(ref err) => err,
             ParseError::XmlError(ref err) => err.description(),
             ParseError::InvalidValue(ref desc) => desc,
             ParseError::UnexpectedXml { .. } => "unexpected XML content",
