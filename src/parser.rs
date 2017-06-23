@@ -133,6 +133,14 @@ impl<'a, R: Read> Parser<'a, R> {
     }
 
     fn parse_value_inner(&mut self) -> ParseResult<Value> {
+        fn invalid_value(for_type: &'static str, value: String) -> ParseError {
+            // FIXME: It might be neat to preserve the original error as the cause
+            ParseError::InvalidValue {
+                for_type: for_type,
+                found: value,
+            }
+        }
+
         let value: Value;
 
         // Raw string or specific type tag
@@ -198,7 +206,7 @@ impl<'a, R: Read> Parser<'a, R> {
                 } else if name == &OwnedName::local("base64") {
                     let data = match self.pull_event()? {
                         XmlEvent::Characters(ref string) => base64::decode(string).map_err(|_| {
-                            io::Error::new(ErrorKind::Other, format!("invalid value for base64: {}", string))
+                            invalid_value("base64", string.to_string())
                         })?,
                         XmlEvent::EndElement { name: ref end_name } if end_name == name => Vec::new(),
                         _ => return self.expected("characters or </base64>"),
@@ -216,27 +224,27 @@ impl<'a, R: Read> Parser<'a, R> {
 
                     if name == &OwnedName::local("i4") || name == &OwnedName::local("int") {
                         Value::Int(data.parse::<i32>().map_err(|_| {
-                            io::Error::new(ErrorKind::Other, format!("invalid value for integer: {}", data))
+                            invalid_value("integer", data)
                         })?)
                     } else if name == &OwnedName::local("i8") {
                         Value::Int64(data.parse::<i64>().map_err(|_| {
-                            io::Error::new(ErrorKind::Other, format!("invalid value for 64-bit integer: {}", data))
+                            invalid_value("i8", data)
                         })?)
                     } else if name == &OwnedName::local("boolean") {
-                        let val = match data.trim() {
+                        let val = match data.trim() {   // FIXME Don't trim this!
                             "0" => false,
                             "1" => true,
-                            _ => return Err(io::Error::new(ErrorKind::Other, format!("invalid value for <boolean>: {}", data)).into())
+                            _ => return Err(invalid_value("boolean", data)),
                         };
 
                         Value::Bool(val)
                     } else if name == &OwnedName::local("double") {
                         Value::Double(data.parse::<f64>().map_err(|_| {
-                            io::Error::new(ErrorKind::Other, format!("invalid value for double: {}", data))
+                            invalid_value("double", data)
                         })?)
                     } else if name == &OwnedName::local("dateTime.iso8601") {
-                        Value::DateTime(datetime(&data).map_err(|e| {
-                            io::Error::new(ErrorKind::Other, format!("invalid value for dateTime.iso8601: {} ({})", data, e))
+                        Value::DateTime(datetime(&data).map_err(|_| {
+                            invalid_value("dateTime.iso8601", data)
                         })?)
                     } else {
                         return self.expected("valid type tag or characters");
@@ -555,10 +563,9 @@ mod tests {
             "unexpected XML at 1:18 (expected characters)"
         );
 
-        // FIXME: This one uses the wrong variant! Stop using io::Error for that.
         assert_eq!(
             errstr(r#"<value><int>bla</int></value>"#),
-            "malformed XML: 1:1 invalid value for integer: bla"
+            "invalid value for type \'integer\': bla"
         );
     }
 }

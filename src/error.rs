@@ -75,7 +75,12 @@ pub enum ParseError {
     /// Could not parse the given CDATA as XML-RPC value.
     ///
     /// For example, `<value><int>AAA</int></value>` describes an invalid value.
-    InvalidValue(String),
+    InvalidValue {
+        /// The type for which an invalid value was supplied (eg. `int` or `dateTime.iso8601`).
+        for_type: &'static str,
+        /// The value we encountered, as a string.
+        found: String,
+    },
 
     /// Found an unexpected tag, attribute, etc.
     UnexpectedXml {
@@ -103,7 +108,10 @@ impl Display for ParseError {
         match *self {
             ParseError::HttpStatus(ref err) => write!(fmt, "HTTP status: {}", err),
             ParseError::XmlError(ref err) => write!(fmt, "malformed XML: {}", err),
-            ParseError::InvalidValue(ref desc) => write!(fmt, "invalid value: {}", desc),
+            ParseError::InvalidValue {
+                for_type,
+                ref found,
+            } => write!(fmt, "invalid value for type '{}': {}", for_type, found),
             ParseError::UnexpectedXml {
                 ref expected,
                 ref position,
@@ -119,7 +127,7 @@ impl Error for ParseError {
         match *self {
             ParseError::HttpStatus(ref err) => err,
             ParseError::XmlError(ref err) => err.description(),
-            ParseError::InvalidValue(ref desc) => desc,
+            ParseError::InvalidValue { .. } => "invalid value for type",
             ParseError::UnexpectedXml { .. } => "unexpected XML content",
         }
     }
