@@ -1,14 +1,14 @@
 //! You can use this example by executing `python3 -m xmlrpc.server` and then running
 //! `cargo run --example client`.
 
+extern crate reqwest;
 extern crate xmlrpc;
-extern crate hyper;
 
 use xmlrpc::{Request, Value};
-use hyper::Client;
+use reqwest::Client;
 
 fn main() {
-    let client = Client::new();
+    let client = Client::new().unwrap();
 
     // The Python example server exports Python's `pow` method. Let's call it!
     let pow_request = Request::new("pow").arg(2).arg(8);    // Compute 2**8

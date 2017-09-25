@@ -8,8 +8,8 @@
 //! [repo]: https://github.com/jonas-schievink/xml-rpc-rs
 
 extern crate base64;
-extern crate hyper;
 extern crate iso8601;
+extern crate reqwest;
 extern crate xml;
 
 mod error;

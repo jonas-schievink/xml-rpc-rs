@@ -2,7 +2,7 @@
 
 use Value;
 
-use hyper::Error as HyperError;
+use reqwest::Error as ReqwestError;
 use xml::reader::Error as XmlError;
 use xml::common::TextPosition;
 
@@ -18,7 +18,7 @@ use std::error::Error;
 #[derive(Debug)]
 pub enum RequestError {
     /// An HTTP communication error occurred while sending the request or receiving the response.
-    HyperError(HyperError),
+    HttpError(ReqwestError),
 
     /// The HTTP status code did not indicate success.
     HttpStatus(String),
@@ -30,9 +30,9 @@ pub enum RequestError {
     // TODO make this extensible. anything missing?
 }
 
-impl From<HyperError> for RequestError {
-    fn from(e: HyperError) -> Self {
-        RequestError::HyperError(e)
+impl From<ReqwestError> for RequestError {
+    fn from(e: ReqwestError) -> Self {
+        RequestError::HttpError(e)
     }
 }
 
@@ -42,16 +42,10 @@ impl From<ParseError> for RequestError {
     }
 }
 
-impl From<io::Error> for RequestError {
-    fn from(e: io::Error) -> Self {
-        RequestError::HyperError(HyperError::from(e))
-    }
-}
-
 impl Display for RequestError {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         match *self {
-            RequestError::HyperError(ref err) => write!(fmt, "HTTP error: {}", err),
+            RequestError::HttpError(ref err) => write!(fmt, "HTTP error: {}", err),
             RequestError::HttpStatus(ref err) => write!(fmt, "HTTP status: {}", err),
             RequestError::ParseError(ref err) => write!(fmt, "parse error: {}", err),
         }
@@ -61,7 +55,7 @@ impl Display for RequestError {
 impl Error for RequestError {
     fn description(&self) -> &str {
         match *self {
-            RequestError::HyperError(ref err) => err.description(),
+            RequestError::HttpError(ref err) => err.description(),
             RequestError::HttpStatus(ref err) => &err,
             RequestError::ParseError(ref err) => err.description(),
         }

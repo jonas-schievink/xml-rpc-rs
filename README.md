@@ -4,6 +4,6 @@
 
 [Documentation](https://docs.rs/xmlrpc/)
 
-This crate provides a simple implementation of the [XML-RPC spec](http://xmlrpc.scripting.com/spec.html) in pure Rust using `xml-rs` and `hyper`.
+This crate provides a simple implementation of the [XML-RPC spec](http://xmlrpc.scripting.com/spec.html) in pure Rust using `xml-rs` and `reqwest`.
 
 See `examples/client.rs` for a small example which connects to a running Python XML-RPC server and calls a method.
