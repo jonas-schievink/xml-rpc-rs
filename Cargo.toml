@@ -14,3 +14,8 @@ base64 = "0.6.0"
 iso8601 = "0.1.1"
 reqwest = "0.7.3"
 xml-rs = "0.6.0"
+
+# cargo-release configuration
+[package.metadata.release]
+tag-message = "{{version}}"
+no-dev-version = true
