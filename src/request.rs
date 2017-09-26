@@ -3,11 +3,10 @@ use parser::parse_response;
 use error::RequestError;
 use utils::escape_xml;
 
-use hyper::client::{Client, Body, RequestBuilder};
-use hyper::header::{ContentType, UserAgent};
-use hyper::status::StatusCode;
+use reqwest::{Body, Client, RequestBuilder, StatusCode};
+use reqwest::header::{ContentType, ContentLength, UserAgent};
 
-use std::io::{self, Write};
+use std::io::{self, Cursor, Write};
 
 /// A request to call a procedure.
 pub struct Request<'a> {
@@ -41,33 +40,33 @@ impl<'a> Request<'a> {
     /// Returns a `RequestResult` indicating whether the request was sent and processed successfully
     /// (according to the rules of XML-RPC).
     pub fn call(&self, client: &Client, url: &str) -> RequestResult {
-        self.call_with(client, url, |b| b)
+        self.call_with(client, url, |_| {})
     }
 
-    /// Calls the method, giving the closure a chance to amend the hyper
+    /// Calls the method, giving the closure a chance to amend the reqwest
     /// `RequestBuilder` before sending.
     pub fn call_with<F>(&self, client: &Client, url: &str, cb: F) -> RequestResult
-        where F: Fn(RequestBuilder) -> RequestBuilder
+        where F: Fn(&mut RequestBuilder)
     {
-        use hyper::mime::{Mime, TopLevel, SubLevel, Attr, Value};
-
         // First, build the body XML
         let mut body = Vec::new();
-        self.write_as_xml(&mut body)?;
+        // This unwrap never panics as we are using `Vec<u8>` as a `Write` implementor,
+        // and not doing anything else that could return an `Err` in `write_as_xml()`.
+        self.write_as_xml(&mut body).unwrap();
 
         // Send XML-RPC request
-        let builder = client.post(url)
-            .header(UserAgent("Rust xmlrpc".to_string()))
-            .header(ContentType(Mime(TopLevel::Text, SubLevel::Xml,
-                                     vec![(Attr::Charset, Value::Utf8)])))
-            .body(Body::BufBody(&body, body.len()));
-        let builder = cb(builder);
+        let mut builder = client.post(url)?;
+        builder
+            .header(UserAgent::new("Rust xmlrpc"))
+            .header(ContentType("text/xml; charset=utf-8".parse().unwrap()))
+            .header(ContentLength(body.len() as u64))
+            .body(Body::new(Cursor::new(body)));
+        cb(&mut builder);
         let mut response = builder.send()?;
 
         // FIXME Check that the response headers are correct
-        if response.status != StatusCode::Ok {
-            let st = response.status_raw();
-            Err(RequestError::HttpStatus(format!("{} {}", st.0, st.1)))
+        if response.status() != StatusCode::Ok {
+            Err(RequestError::HttpStatus(format!("{}", response.status())))
         } else {
             // Read the response and parse it
             // FIXME `BufRead`?
