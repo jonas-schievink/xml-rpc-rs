@@ -326,7 +326,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_response2() {
+    fn parses_base64_response() {
         assert_ok(read_response(r##"
 <?xml version="1.0" encoding="UTF-8"?>
 <methodResponse>
