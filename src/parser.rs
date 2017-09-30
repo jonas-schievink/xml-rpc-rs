@@ -220,9 +220,12 @@ impl<'a, R: Read> Parser<'a, R> {
                     }
                     "base64" => {
                         let data = match self.pull_event()? {
-                            XmlEvent::Characters(ref string) => base64::decode(string).map_err(|_| {
-                                self.invalid_value("base64", string.to_string())
-                            })?,
+                            XmlEvent::Characters(ref string) => {
+                                self.expect_close("base64")?;
+                                base64::decode(string).map_err(|_| {
+                                    self.invalid_value("base64", string.to_string())
+                                })?
+                            },
                             XmlEvent::EndElement { name: ref end_name }
                                 if end_name.local_name == name => Vec::new(),
                             _ => return self.expected("characters or </base64>"),
@@ -320,6 +323,20 @@ mod tests {
             Ok(t) => panic!("assert_err called on Ok value: {:?}", t),
             Err(_) => {},
         }
+    }
+
+    #[test]
+    fn parses_response2() {
+        assert_ok(read_response(r##"
+<?xml version="1.0" encoding="UTF-8"?>
+<methodResponse>
+    <params>
+        <param>
+            <value><base64>0J/QvtC10YXQsNC70Lgh</base64></value>
+        </param>
+    </params>
+</methodResponse>
+"##));
     }
 
     #[test]
@@ -466,6 +483,12 @@ mod tests {
         assert_ok(read_value("<value><dateTime.iso8601>19980717T14:08:55</dateTime.iso8601></value>"));
         assert_err(read_value("<value><dateTime.iso8601></dateTime.iso8601></value>"));
         assert_err(read_value("<value><dateTime.iso8601>ILLEGAL VALUE :(</dateTime.iso8601></value>"));
+    }
+
+    #[test]
+    fn parses_base64() {
+        assert_eq!(read_value("<value><base64>0J/QvtC10YXQsNC70Lgh</base64></value>"),
+            Ok(Value::Base64(vec!(208, 159, 208, 190, 208, 181, 209, 133, 208, 176, 208, 187, 208, 184, 33))));
     }
 
     #[test]
