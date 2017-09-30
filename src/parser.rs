@@ -488,7 +488,7 @@ mod tests {
     #[test]
     fn parses_base64() {
         assert_eq!(read_value("<value><base64>0J/QvtC10YXQsNC70Lgh</base64></value>"),
-            Ok(Value::Base64(vec!(208, 159, 208, 190, 208, 181, 209, 133, 208, 176, 208, 187, 208, 184, 33))));
+            Ok(Value::Base64("Поехали!".bytes().collect())));
     }
 
     #[test]
