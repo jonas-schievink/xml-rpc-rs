@@ -7,6 +7,7 @@ use reqwest::{Body, Client, RequestBuilder, StatusCode};
 use reqwest::header::{ContentType, ContentLength, UserAgent};
 
 use std::io::{self, Cursor, Write};
+use std::collections::BTreeMap;
 
 /// A request to call a procedure.
 pub struct Request<'a> {
@@ -88,6 +89,21 @@ impl<'a> Request<'a> {
         write!(fmt, r#"    </params>"#)?;
         write!(fmt, r#"</methodCall>"#)?;
         Ok(())
+    }
+
+    /// Serialize this `Request` into an XML-RPC struct that can be passed to
+    /// the [`system.multicall`](https://mirrors.talideon.com/articles/multicall.html)
+    /// XML-RPC method, specifically a struct with two fields:
+    ///
+    /// * `methodName`: the request name
+    /// * `params`: the request arguments
+    pub fn into_multicall_struct(self) -> Value {
+        let mut multicall_struct: BTreeMap<String, Value> = BTreeMap::new();
+
+        multicall_struct.insert("methodName".into(), self.name.into());
+        multicall_struct.insert("params".into(), Value::Array(self.args));
+
+        Value::Struct(multicall_struct)
     }
 }
 
