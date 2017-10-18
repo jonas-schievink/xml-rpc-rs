@@ -8,7 +8,7 @@ use xmlrpc::{Request, Value};
 use reqwest::Client;
 
 fn main() {
-    let client = Client::new().unwrap();
+    let client = Client::new();
 
     // The Python example server exports Python's `pow` method. Let's call it!
     let pow_request = Request::new("pow").arg(2).arg(8);    // Compute 2**8
