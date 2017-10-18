@@ -21,6 +21,7 @@ mod utils;
 pub use error::{ParseError, RequestError, Fault};
 pub use request::{Request, RequestResult};
 pub use value::Value;
+pub use parser::{ParseResult, parse_response};
 
 /// A response from the server.
 ///
