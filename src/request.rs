@@ -55,7 +55,7 @@ impl<'a> Request<'a> {
         self.write_as_xml(&mut body).unwrap();
 
         // Send XML-RPC request
-        let mut builder = client.post(url)?;
+        let mut builder = client.post(url);
         builder
             .header(UserAgent::new("Rust xmlrpc"))
             .header(ContentType("text/xml; charset=utf-8".parse().unwrap()))
