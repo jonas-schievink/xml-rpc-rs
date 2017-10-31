@@ -84,6 +84,7 @@ pub enum ParseError {
     UnexpectedXml {
         /// A short description of the kind of data that was expected.
         expected: String,
+        found: Option<String>,
         /// The position of the unexpected data inside the XML document.
         position: TextPosition,
     }
@@ -113,8 +114,16 @@ impl Display for ParseError {
             ParseError::UnexpectedXml {
                 ref expected,
                 ref position,
+                found: None,
             } => {
                 write!(fmt, "unexpected XML at {} (expected {})", position, expected)
+            }
+            ParseError::UnexpectedXml {
+                ref expected,
+                ref position,
+                found: Some(ref found),
+            } => {
+                write!(fmt, "unexpected XML at {} (expected {}, found {})", position, expected, found)
             }
         }
     }

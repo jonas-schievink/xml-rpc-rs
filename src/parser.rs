@@ -16,22 +16,28 @@ pub type ParseResult<T> = Result<T, ParseError>;
 
 pub struct Parser<'a, R: Read + 'a> {
     reader: EventReader<&'a mut R>,
+    /// Current "token". The parser makes decisions based on this token, then pulls the next one
+    /// from `reader`.
+    cur: XmlEvent,
 }
 
 impl<'a, R: Read> Parser<'a, R> {
-    pub fn new(reader: &'a mut R) -> Self {
-        Parser {
-            reader: EventReader::new_with_config(reader, ParserConfig {
-                cdata_to_characters: true,
-                ..Default::default()
-            }),
-        }
+    pub fn new(reader: &'a mut R) -> ParseResult<Self> {
+        let reader = EventReader::new_with_config(reader, ParserConfig {
+            cdata_to_characters: true,
+            ..Default::default()
+        });
+
+        let mut parser = Parser {
+            cur: XmlEvent::EndDocument, // dummy value
+            reader,
+        };
+        parser.next()?;
+        Ok(parser)
     }
 
-    /// Reads an `XmlEvent` from a reader, disposing events we want to ignore.
-    ///
-    /// When encountering a new element, returns an `Err` if it has any attributes.
-    fn pull_event(&mut self) -> ParseResult<XmlEvent> {
+    /// Disposes `self.cur` and pulls the next event from the XML parser to replace it.
+    fn next(&mut self) -> ParseResult<()> {
         loop {
             let event = self.reader.next()?;
             match event {
@@ -57,25 +63,30 @@ impl<'a, R: Read> Parser<'a, R> {
                 | XmlEvent::Characters(_) => {}
             }
 
-            return Ok(event);
+            self.cur = event;
+            return Ok(());
         }
     }
 
-    /// Expects an opening tag like `<tag>` without attributes (and a local name without namespaces).
+    /// Expects that the current token is an opening tag like `<tag>` without attributes (and a
+    /// local name without namespaces). If not, returns an error.
     fn expect_open(&mut self, tag: &str) -> ParseResult<()> {
-        match self.pull_event()? {
+        match self.cur.clone() {
             XmlEvent::StartElement { ref name, .. }
             if name == &OwnedName::local(tag) => {
+                self.next()?;
                 Ok(())
             }
             _ => return self.expected(format!("<{}>", tag)),
         }
     }
 
-    /// Expects a closing tag like `</tag>` with a local name without namespaces.
+    /// Expects that the current token is a closing tag like `</tag>` with a local name without
+    /// namespaces. If not, returns an error.
     fn expect_close(&mut self, tag: &str) -> ParseResult<()> {
-        match self.pull_event()? {
+        match self.cur.clone() {
             XmlEvent::EndElement { ref name } if name == &OwnedName::local(tag) => {
+                self.next()?;
                 Ok(())
             }
             _ => self.expected(format!("</{}>", tag)),
@@ -88,15 +99,23 @@ impl<'a, R: Read> Parser<'a, R> {
         let position = self.reader.position();
 
         Err(ParseError::UnexpectedXml {
-            expected: expected,
-            position: position,
+            expected,
+            position,
+            found: match self.cur {
+                XmlEvent::StartElement { ref name, .. } => Some(format!("<{}>", name)),
+                XmlEvent::EndElement { ref name, .. } => Some(format!("</{}>", name)),
+                XmlEvent::EndDocument => Some("end of data".to_string()),
+                XmlEvent::Characters(ref data)
+                | XmlEvent::CData(ref data) => Some(format!("\"{}\"", data)),
+                _ => None
+            },
         })
     }
 
     fn invalid_value(&self, for_type: &'static str, value: String) -> ParseError {
         // FIXME: It might be neat to preserve the original error as the cause
         ParseError::InvalidValue {
-            for_type: for_type,
+            for_type,
             found: value,
             position: self.reader.position(),
         }
@@ -109,15 +128,17 @@ impl<'a, R: Read> Parser<'a, R> {
         self.expect_open("methodResponse")?;
 
         // <fault> / <params>
-        match self.pull_event()? {
+        match self.cur.clone() {
             XmlEvent::StartElement { ref name, .. } => {
                 if name == &OwnedName::local("fault") {
+                    self.next()?;
                     let value = self.parse_value()?;
                     let fault = Fault::from_value(&value).ok_or_else(|| {
                         io::Error::new(ErrorKind::Other, "malformed <fault>")
                     })?;
                     response = Err(fault);
                 } else if name == &OwnedName::local("params") {
+                    self.next()?;
                     // <param>
                     self.expect_open("param")?;
 
@@ -140,6 +161,11 @@ impl<'a, R: Read> Parser<'a, R> {
         // <value>
         self.expect_open("value")?;
 
+        if let Ok(()) = self.expect_close("value") {
+            // empty value, parse as empty string
+            return Ok(Value::String(String::new()));
+        }
+
         let value = self.parse_value_inner()?;
 
         // </value>
@@ -149,92 +175,100 @@ impl<'a, R: Read> Parser<'a, R> {
     }
 
     fn parse_value_inner(&mut self) -> ParseResult<Value> {
-        let value: Value;
+        let value = match self.cur.clone() {
+            // Raw string or specific type tag
 
-        // Raw string or specific type tag
-        value = match self.pull_event()? {
             XmlEvent::StartElement { ref name, .. } => {
                 let name = &*name.local_name;
                 match name {
                     "struct" => {
+                        self.next()?;
                         let mut members = BTreeMap::new();
                         loop {
-                            match self.pull_event()? {
-                                XmlEvent::EndElement { ref name } if name == &OwnedName::local("struct") => break,
-                                XmlEvent::StartElement { ref name, .. } if name == &OwnedName::local("member") => {
-                                    // <member>
-
-                                    // <name>NAME</name>
-                                    self.expect_open("name")?;
-                                    let name = match self.pull_event()? {
-                                        XmlEvent::Characters(string) => string,
-                                        _ => return self.expected("characters"),
-                                    };
-                                    self.expect_close("name")?;
-
-                                    // Value
-                                    let value = self.parse_value()?;
-
-                                    // </member>
-                                    self.expect_close("member")?;
-
-                                    members.insert(name, value);
-                                }
-                                _ => return self.expected("</struct> or <member>"),
+                            if let Ok(_) = self.expect_close("struct") {
+                                break;
                             }
+
+                            self.expect_open("member")?;
+                            // <member>
+
+                            // <name>NAME</name>
+                            self.expect_open("name")?;
+                            let name = match self.cur.clone() {
+                                XmlEvent::Characters(string) => string,
+                                _ => return self.expected("characters"),
+                            };
+                            self.next()?;
+                            self.expect_close("name")?;
+
+                            // Value
+                            let value = self.parse_value()?;
+
+                            // </member>
+                            self.expect_close("member")?;
+
+                            members.insert(name, value);
                         }
 
                         Value::Struct(members)
                     }
                     "array" => {
+                        self.next()?;
                         let mut elements: Vec<Value> = Vec::new();
                         self.expect_open("data")?;
                         loop {
-                            match self.pull_event()? {
-                                XmlEvent::EndElement { ref name } if name == &OwnedName::local("data") => break,
-                                XmlEvent::StartElement { ref name, .. } if name == &OwnedName::local("value") => {
-                                    elements.push(self.parse_value_inner()?);
-                                    self.expect_close("value")?;
-                                }
-                                _event => return self.expected("</data> or <value>")
+                            if let Ok(_) = self.expect_close("data") {
+                                break;
                             }
+
+                            elements.push(self.parse_value()?);
                         }
                         self.expect_close("array")?;
                         Value::Array(elements)
                     }
                     "nil" => {
+                        self.next()?;
                         self.expect_close("nil")?;
                         Value::Nil
                     }
                     "string" => {
-                        let string = match self.pull_event()? {
+                        self.next()?;
+                        let string = match self.cur.clone() {
                             XmlEvent::Characters(string) => {
-                                self.expect_close(name)?;
+                                self.next()?;
+                                self.expect_close("string")?;
                                 string
                             },
-                            XmlEvent::EndElement { name: ref end_name }
-                                if end_name.local_name == name => String::new(),
+                            XmlEvent::EndElement { ref name } if name.local_name == "string" => {
+                                self.next()?;
+                                String::new()
+                            },
                             _ => return self.expected("characters or </string>"),
                         };
                         Value::String(string)
                     }
                     "base64" => {
-                        let data = match self.pull_event()? {
+                        self.next()?;
+                        let data = match self.cur.clone() {
                             XmlEvent::Characters(ref string) => {
+                                self.next()?;
                                 self.expect_close("base64")?;
                                 base64::decode(string).map_err(|_| {
                                     self.invalid_value("base64", string.to_string())
                                 })?
                             },
-                            XmlEvent::EndElement { name: ref end_name }
-                                if end_name.local_name == name => Vec::new(),
+                            XmlEvent::EndElement { ref name } if name.local_name == "base64" => {
+                                self.next()?;
+                                Vec::new()
+                            },
                             _ => return self.expected("characters or </base64>"),
                         };
                         Value::Base64(data)
                     }
                     _ => {
+                        self.next()?;
                         // All other types expect raw characters...
-                        let data = match self.pull_event()? {
+                        let data = match self.cur.clone() {
                             XmlEvent::Characters(string) => string,
                             _ => return self.expected("characters"),
                         };
@@ -271,6 +305,7 @@ impl<'a, R: Read> Parser<'a, R> {
                             _ => return self.expected("valid type tag or characters"),
                         };
 
+                        self.next()?;
                         // ...and a corresponding close tag
                         self.expect_close(name)?;
 
@@ -279,6 +314,7 @@ impl<'a, R: Read> Parser<'a, R> {
                 }
             }
             XmlEvent::Characters(string) => {
+                self.next()?;
                 Value::String(string)
             }
             _ => return self.expected("type tag or characters"),
@@ -290,7 +326,7 @@ impl<'a, R: Read> Parser<'a, R> {
 
 /// Parses a response from an XML reader.
 pub fn parse_response<R: Read>(reader: &mut R) -> ParseResult<Response> {
-    Parser::new(reader).parse_response()
+    Parser::new(reader)?.parse_response()
 }
 
 #[cfg(test)]
@@ -306,7 +342,7 @@ mod tests {
     }
 
     fn read_value(xml: &str) -> ParseResult<Value> {
-        Parser::new(&mut xml.as_bytes()).parse_value()
+        Parser::new(&mut xml.as_bytes())?.parse_value()
     }
 
     /// Test helper function that will panic with the `Err` if a `Result` is not an `Ok`.
@@ -505,7 +541,6 @@ mod tests {
     fn parses_raw_value_as_string() {
         assert_eq!(read_value("<value>\t  I'm a string!  </value>"),
             Ok(Value::String("\t  I'm a string!  ".into())));
-        // FIXME: Are empty <value>-tags also supposed to be parsed as empty strings?
     }
 
     #[test]
@@ -527,6 +562,12 @@ mod tests {
             Ok(Value::String(String::new())));
         assert_eq!(read_value("<value><string/></value>"),
             Ok(Value::String(String::new())));
+    }
+
+    #[test]
+    fn parses_empty_value_as_string() {
+        assert_eq!(read_value("<value></value>"),
+                   Ok(Value::String(String::new())));
     }
 
     #[test]
@@ -601,18 +642,49 @@ mod tests {
 
         assert_eq!(
             errstr(r#"<value name="ble">\t  I'm a string!  </value>"#),
-            "unexpected XML at 1:1 (expected tag <value> without attributes)"
+            "unexpected XML at 1:1 (expected tag <value> without attributes, found end of data)"
         );
 
         // FIXME: This one could use some improvement:
         assert_eq!(
             errstr(r#"<value><SURPRISE></SURPRISE></value>"#),
-            "unexpected XML at 1:18 (expected characters)"
+            "unexpected XML at 1:18 (expected characters, found </SURPRISE>)"
         );
 
         assert_eq!(
             errstr(r#"<value><int>bla</int></value>"#),
             "invalid value for type \'integer\' at 1:13: bla"
         );
+    }
+
+    #[test]
+    fn parses_empty_value_response() {
+        assert_ok(read_response(r##"
+<?xml version="1.0"?>
+<methodResponse>
+    <params>
+        <param>
+            <value></value>
+        </param>
+    </params>
+</methodResponse>
+"##));
+    }
+
+    #[test]
+    fn parses_empty_value_in_struct_response() {
+        assert_ok(read_response(r##"
+<?xml version="1.0"?>
+<methodResponse>
+    <params>
+        <param><value>
+        <struct><member>
+            <name>Test</name>
+            <value></value>
+        </member></struct>
+        </value></param>
+    </params>
+</methodResponse>
+"##));
     }
 }
