@@ -9,6 +9,7 @@ use xml::common::TextPosition;
 use std::io;
 use std::fmt::{self, Formatter, Display};
 use std::error::Error;
+use std::collections::BTreeMap;
 
 /// A request could not be executed.
 ///
@@ -175,5 +176,32 @@ impl Fault {
             }
             _ => None
         }
+    }
+
+    /// Turns this `Fault` into an equivalent `Value`.
+    ///
+    /// The returned value can be parsed back into a `Fault` using `Fault::from_value` or returned
+    /// as a `<fault>` error response by serializing it into a `<fault></fault>` tag.
+    pub fn to_value(&self) -> Value {
+        let mut map = BTreeMap::new();
+        map.insert("faultCode".to_string(), Value::from(self.fault_code));
+        map.insert("faultString".to_string(), Value::from(self.fault_string.as_ref()));
+
+        Value::Struct(map)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fault_roundtrip() {
+        let input = Fault {
+            fault_code: -123456,
+            fault_string: "The Bald Lazy House Jumps Over The Hyperactive Kitten".to_string()
+        };
+
+        assert_eq!(Fault::from_value(&input.to_value()), Some(input));
     }
 }
