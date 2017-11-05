@@ -21,7 +21,7 @@ impl<'a> Request<'a> {
     /// By default, no arguments are passed. Use the `arg` method to append arguments.
     pub fn new(name: &'a str) -> Self {
         Request {
-            name: name,
+            name,
             args: Vec::new(),
         }
     }
@@ -29,11 +29,7 @@ impl<'a> Request<'a> {
     /// Appends an argument to be passed to the current list of arguments.
     pub fn arg<T: Into<Value>>(mut self, value: T) -> Self {
         self.args.push(value.into());
-
-        Request {
-            name: self.name,
-            args: self.args,
-        }
+        self
     }
 
     /// Calls the method using the given `Client`.

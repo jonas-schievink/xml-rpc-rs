@@ -156,12 +156,12 @@ impl Fault {
     ///
     /// Returns `None` if the value isn't a valid `Fault`.
     pub fn from_value(value: &Value) -> Option<Self> {
-        match value {
-            &Value::Struct(ref map) => {
+        match *value {
+            Value::Struct(ref map) => {
                 match (map.get("faultCode"), map.get("faultString")) {
                     (Some(&Value::Int(fault_code)), Some(&Value::String(ref fault_string))) => {
                         Some(Fault {
-                            fault_code: fault_code,
+                            fault_code,
                             fault_string: fault_string.to_string(),
                         })
                     }
