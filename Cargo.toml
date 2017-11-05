@@ -13,7 +13,7 @@ version = "0.7.1"
 base64 = "0.6.0"
 iso8601 = "0.1.1"
 reqwest = "0.8.0"
-xml-rs = "0.6.0"
+xml-rs = "0.7.0"
 
 # cargo-release configuration
 [package.metadata.release]
