@@ -191,6 +191,18 @@ impl Fault {
     }
 }
 
+impl Display for Fault {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{} ({})", self.fault_string, self.fault_code)
+    }
+}
+
+impl Error for Fault {
+    fn description(&self) -> &str {
+        &self.fault_string
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
