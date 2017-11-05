@@ -79,7 +79,7 @@ impl<'a> Request<'a> {
         write!(fmt, r#"    <params>"#)?;
         for value in &self.args {
             write!(fmt, r#"        <param>"#)?;
-            value.format(fmt)?;
+            value.write_as_xml(fmt)?;
             write!(fmt, r#"        </param>"#)?;
         }
         write!(fmt, r#"    </params>"#)?;

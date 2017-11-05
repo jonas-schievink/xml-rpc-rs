@@ -42,7 +42,8 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn format<W: Write>(&self, fmt: &mut W) -> io::Result<()> {
+    /// Formats this `Value` as an XML `<value>` element.
+    pub fn write_as_xml<W: Write>(&self, fmt: &mut W) -> io::Result<()> {
         writeln!(fmt, "<value>")?;
 
         match *self {
@@ -72,7 +73,7 @@ impl Value {
                 for (ref name, ref value) in map {
                     writeln!(fmt, "<member>")?;
                     writeln!(fmt, "<name>{}</name>", escape_xml(name))?;
-                    value.format(fmt)?;
+                    value.write_as_xml(fmt)?;
                     writeln!(fmt, "</member>")?;
                 }
                 writeln!(fmt, "</struct>")?;
@@ -81,7 +82,7 @@ impl Value {
                 writeln!(fmt, "<array>")?;
                 writeln!(fmt, "<data>")?;
                 for value in array {
-                    value.format(fmt)?;
+                    value.write_as_xml(fmt)?;
                 }
                 writeln!(fmt, "</data>")?;
                 writeln!(fmt, "</array>")?;
@@ -148,7 +149,7 @@ mod tests {
     fn escapes_strings() {
         let mut output: Vec<u8> = Vec::new();
 
-        Value::from("<xml>&nbsp;string").format(&mut output).unwrap();
+        Value::from("<xml>&nbsp;string").write_as_xml(&mut output).unwrap();
         assert_eq!(str::from_utf8(&output).unwrap(), "<value>\n<string>&lt;xml>&amp;nbsp;string</string>\n</value>\n");
     }
 
@@ -158,7 +159,7 @@ mod tests {
         let mut map: BTreeMap<String, Value> = BTreeMap::new();
         map.insert("x&<x".to_string(), Value::from(true));
 
-        Value::Struct(map).format(&mut output).unwrap();
+        Value::Struct(map).write_as_xml(&mut output).unwrap();
         assert_eq!(str::from_utf8(&output).unwrap(), "<value>\n<struct>\n<member>\n<name>x&amp;&lt;x</name>\n<value>\n<boolean>1</boolean>\n</value>\n</member>\n</struct>\n</value>\n");
     }
 }
