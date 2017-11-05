@@ -416,12 +416,10 @@ mod tests {
     }
 
     #[test]
-    fn ignores_additional_fault_fields() {
-        // FIXME: This is wrong behaviour:
+    fn rejects_additional_fault_fields() {
         // "A <fault> struct may not contain members other than those specified."
-        // So this should be rejected by the parser.
 
-        assert_eq!(read_response(r##"
+        assert_err(read_response(r##"
 <?xml version="1.0"?>
 <methodResponse>
    <fault>
@@ -442,11 +440,7 @@ mod tests {
             </struct>
          </value>
       </fault>
-   </methodResponse>"##),
-        Ok(Err(Fault {
-            fault_code: 4,
-            fault_string: "Too many parameters.".into(),
-        })));
+   </methodResponse>"##));
     }
 
     #[test]

@@ -158,6 +158,11 @@ impl Fault {
     pub fn from_value(value: &Value) -> Option<Self> {
         match *value {
             Value::Struct(ref map) => {
+                if map.len() != 2 {
+                    // incorrect field count
+                    return None;
+                }
+
                 match (map.get("faultCode"), map.get("faultString")) {
                     (Some(&Value::Int(fault_code)), Some(&Value::String(ref fault_string))) => {
                         Some(Fault {
