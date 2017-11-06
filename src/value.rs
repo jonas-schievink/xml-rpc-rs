@@ -133,6 +133,8 @@ impl From<DateTime> for Value {
     }
 }
 
+// FIXME This impl isn't obvious - theoretically you can use <string> to transfer binary data!
+// (also see https://github.com/jonas-schievink/xml-rpc-rs/issues/17)
 impl From<Vec<u8>> for Value {
     fn from(other: Vec<u8>) -> Self {
         Value::Base64(other)

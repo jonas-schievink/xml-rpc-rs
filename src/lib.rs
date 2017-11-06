@@ -9,7 +9,6 @@
 
 extern crate base64;
 extern crate iso8601;
-extern crate reqwest;
 extern crate xml;
 
 mod error;
@@ -17,11 +16,12 @@ mod parser;
 mod request;
 mod value;
 mod utils;
+mod transport;
 
-pub use error::{ParseError, RequestError, Fault};
+pub use error::{RequestError, Fault};
 pub use request::{Request, RequestResult};
 pub use value::Value;
-pub use parser::{ParseResult, parse_response};
+pub use transport::Transport;
 
 /// A response from the server.
 ///
