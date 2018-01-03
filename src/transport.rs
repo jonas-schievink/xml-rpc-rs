@@ -68,6 +68,9 @@ pub mod http {
     /// Content-Length: $body_len
     /// ```
     pub fn build_headers(builder: &mut RequestBuilder, body_len: u64) {
+        // Set all required request headers
+        // NB: The `Host` header is also required, but reqwest adds it automatically, since
+        // HTTP/1.1 requires it.
         builder
             .header(UserAgent::new("Rust xmlrpc"))
             .header(ContentType("text/xml; charset=utf-8".parse().unwrap()))
@@ -110,9 +113,6 @@ pub mod http {
             // and not doing anything else that could return an `Err` in `write_as_xml()`.
             request.write_as_xml(&mut body).unwrap();
 
-            // Set all required request headers
-            // NB: The `Host` header is also required, but reqwest adds it automatically, since
-            // HTTP/1.1 requires it.
             build_headers(&mut self, body.len() as u64);
 
             let response = self
