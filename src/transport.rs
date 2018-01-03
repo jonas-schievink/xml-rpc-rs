@@ -10,8 +10,8 @@ use std::error::Error;
 /// it to perform that request.
 ///
 /// The most commonly used transport is simple HTTP: If the `reqwest` feature is enabled (it is by
-/// default), the reqwest `Client` will implement this trait and send the XML-RPC `Request` via
-/// HTTP.
+/// default), the reqwest `RequestBuilder` will implement this trait and send the XML-RPC `Request`
+/// via HTTP.
 ///
 /// You can implement this trait for your own types if you want to customize how requests are sent.
 /// You can modify HTTP headers or wrap requests in a completely different protocol.
@@ -31,9 +31,25 @@ pub trait Transport {
     fn transmit(self, request: &Request) -> Result<Self::Stream, Box<Error>>;
 }
 
-/// Contains `Transport` implementations for types of the `reqwest` crate.
+/// Provides helpers for implementing custom `Transport`s using reqwest.
+///
+/// This module will be disabled if the `reqwest` feature is not enabled.
+///
+/// The default `Transport` implementation for `RequestBuilder` looks roughly like this:
+///
+/// ```notrust
+/// // serialize request into `body` (a `Vec<u8>`)
+///
+/// build_headers(builder, body.len());
+///
+/// // send `body` using `builder`, ensure server returned 200 OK
+///
+/// check_response(&response)?;
+/// ```
+///
+/// From this, you can build your own custom transports.
 #[cfg(feature = "reqwest")]
-mod reqwest {
+pub mod http {
     extern crate reqwest;
 
     use {Request, Transport};
@@ -41,6 +57,44 @@ mod reqwest {
     use self::reqwest::header::{ContentType, ContentLength, UserAgent};
 
     use std::error::Error;
+
+    /// Appends all HTTP headers required by the XML-RPC specification to the `RequestBuilder`.
+    ///
+    /// More specifically, the following headers are set:
+    ///
+    /// ```notrust
+    /// User-Agent: Rust xmlrpc
+    /// Content-Type: text/xml; charset=utf-8
+    /// Content-Length: $body_len
+    /// ```
+    pub fn build_headers(builder: &mut RequestBuilder, body_len: u64) {
+        builder
+            .header(UserAgent::new("Rust xmlrpc"))
+            .header(ContentType("text/xml; charset=utf-8".parse().unwrap()))
+            .header(ContentLength(body_len));
+    }
+
+    /// Checks that a reqwest `Response` contains all headers mandated by the spec.
+    ///
+    /// This is done by default to ensure compliance.
+    pub fn check_response(response: &reqwest::Response) -> Result<(), Box<Error>> {
+        // Check response headers
+        // "The Content-Type is text/xml. Content-Length must be present and correct."
+        if let Some(content) = response.headers().get::<ContentType>() {
+            // (we ignore this if the header is missing completely)
+            match (content.type_(), content.subtype()) {
+                (mime::TEXT, mime::XML) => {},
+                (ty, sub) => return Err(
+                    format!("expected Content-Type 'text/xml', got '{}/{}'", ty, sub).into()
+                ),
+            }
+        }
+
+        response.headers().get::<ContentLength>()
+            .ok_or_else(|| format!("expected Content-Length header, but none was found"))?;
+
+        Ok(())
+    }
 
     /// Use a `RequestBuilder` as the transport.
     ///
@@ -59,30 +113,14 @@ mod reqwest {
             // Set all required request headers
             // NB: The `Host` header is also required, but reqwest adds it automatically, since
             // HTTP/1.1 requires it.
-            let builder = self
-                .header(UserAgent::new("Rust xmlrpc"))
-                .header(ContentType("text/xml; charset=utf-8".parse().unwrap()))
-                .header(ContentLength(body.len() as u64));
+            build_headers(&mut self, body.len() as u64);
 
-            let response = builder
+            let response = self
                 .body(body)
                 .send()?
                 .error_for_status()?;
 
-            // Check response headers
-            // "The Content-Type is text/xml. Content-Length must be present and correct."
-            if let Some(content) = response.headers().get::<ContentType>() {
-                // (we ignore this if the header is missing completely)
-                match (content.type_(), content.subtype()) {
-                    (mime::TEXT, mime::XML) => {},
-                    (ty, sub) => return Err(
-                        format!("expected Content-Type 'text/xml', got '{}/{}'", ty, sub).into()
-                    ),
-                }
-            }
-
-            response.headers().get::<ContentLength>()
-                .ok_or_else(|| format!("expected Content-Length header, but none was found"))?;
+            check_response(&response)?;
 
             Ok(response)
         }
