@@ -53,7 +53,7 @@ pub mod http {
     extern crate reqwest;
 
     use {Request, Transport};
-    use self::reqwest::{Client, RequestBuilder, Url, mime};
+    use self::reqwest::{RequestBuilder, mime};
     use self::reqwest::header::{ContentType, ContentLength, UserAgent};
 
     use std::error::Error;
@@ -125,22 +125,4 @@ pub mod http {
             Ok(response)
         }
     }
-
-    /// Convenience implementation for `Url`. Creates a `Client` and performs a `POST` request to
-    /// the URL.
-    // (this isn't actually that convenient - to parse a URL to have to deal with another layer of
-    // errors)
-    impl Transport for Url {
-        type Stream = reqwest::Response;
-
-        fn transmit(self, request: &Request) -> Result<Self::Stream, Box<Error>> {
-            Client::new().post(self).transmit(request)
-        }
-    }
 }
-
-// TODO: integration test - can you usefully implement this trait from outside?
-// Also test reported use cases:
-// - Cookie support (missing in reqwest!),
-// - Custom useragent
-// - "XML-RPC wrapped in SCGI over a unix domain socket"
