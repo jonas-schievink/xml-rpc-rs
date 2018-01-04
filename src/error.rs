@@ -2,7 +2,6 @@
 
 use Value;
 
-use reqwest::Error as ReqwestError;
 use xml::reader::Error as XmlError;
 use xml::common::TextPosition;
 
@@ -18,23 +17,16 @@ use std::collections::BTreeMap;
 /// this error will not occur.
 #[derive(Debug)]
 pub enum RequestError {
-    /// An HTTP communication error occurred while sending the request or receiving the response.
-    HttpError(ReqwestError),
-
-    /// The HTTP status code did not indicate success.
-    HttpStatus(String),
-
     /// The response could not be parsed. This can happen when the server doesn't correctly
     /// implement the XML-RPC spec.
     ParseError(ParseError),
 
-    // TODO make this extensible. anything missing?
-}
+    /// A communication error originating from the transport used to perform the request.
+    TransportError(Box<Error + 'static>),
 
-impl From<ReqwestError> for RequestError {
-    fn from(e: ReqwestError) -> Self {
-        RequestError::HttpError(e)
-    }
+    // FIXME use the RFC 2008 solution when stable
+    #[doc(hidden)]
+    __NonExhaustive,
 }
 
 impl From<ParseError> for RequestError {
@@ -46,9 +38,9 @@ impl From<ParseError> for RequestError {
 impl Display for RequestError {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         match *self {
-            RequestError::HttpError(ref err) => write!(fmt, "HTTP error: {}", err),
-            RequestError::HttpStatus(ref err) => write!(fmt, "HTTP status: {}", err),
             RequestError::ParseError(ref err) => write!(fmt, "parse error: {}", err),
+            RequestError::TransportError(ref err) => write!(fmt, "transport error: {}", err),
+            RequestError::__NonExhaustive => unreachable!(),
         }
     }
 }
@@ -56,9 +48,17 @@ impl Display for RequestError {
 impl Error for RequestError {
     fn description(&self) -> &str {
         match *self {
-            RequestError::HttpError(ref err) => err.description(),
-            RequestError::HttpStatus(ref err) => &err,
-            RequestError::ParseError(ref err) => err.description(),
+            RequestError::ParseError(_) => "parse error",
+            RequestError::TransportError(_) => "transport error",
+            RequestError::__NonExhaustive => unreachable!(),
+        }
+    }
+
+    fn cause(&self) -> Option<&Error> {
+        match *self {
+            RequestError::ParseError(ref err) => Some(err),
+            RequestError::TransportError(ref err) => Some(err.as_ref()),
+            RequestError::__NonExhaustive => unreachable!(),
         }
     }
 }

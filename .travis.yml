@@ -5,4 +5,7 @@ env:
   global:
     - RUSTFLAGS="--deny warnings"
     - RUST_BACKTRACE=1
-script: cargo test
+  matrix:
+    - FEATURES="" # default configuration (with reqwest)
+    - FEATURES="--no-default-features"
+script: cargo test $FEATURES

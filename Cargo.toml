@@ -12,8 +12,19 @@ version = "0.9.0"
 [dependencies]
 base64 = "0.6.0"
 iso8601 = "0.1.1"
-reqwest = "0.8.0"
 xml-rs = "0.7.0"
+reqwest = { version = "0.8.0", optional = true }
+
+[features]
+default = ["reqwest"]
+
+[[example]]
+name = "client"
+required-features = ["reqwest"]
+
+[[example]]
+name = "custom-header"
+required-features = ["reqwest"]
 
 # cargo-release configuration
 [package.metadata.release]

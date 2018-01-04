@@ -1,12 +1,13 @@
+#[cfg(feature = "reqwest")]
+extern crate reqwest;
+
 use {Value, Response};
-use parser::parse_response;
 use error::RequestError;
 use utils::escape_xml;
+use transport::Transport;
+use parser::parse_response;
 
-use reqwest::{Body, Client, RequestBuilder, StatusCode};
-use reqwest::header::{ContentType, ContentLength, UserAgent};
-
-use std::io::{self, Cursor, Write};
+use std::io::{self, Write};
 use std::collections::BTreeMap;
 
 /// A request to call a procedure.
@@ -32,43 +33,27 @@ impl<'a> Request<'a> {
         self
     }
 
-    /// Calls the method using the given `Client`.
+    /// Performs the request using a `transport`.
     ///
     /// Returns a `RequestResult` indicating whether the request was sent and processed successfully
     /// (according to the rules of XML-RPC).
-    pub fn call(&self, client: &Client, url: &str) -> RequestResult {
-        self.call_with(client, url, |_| {})
+    pub fn call<T: Transport>(&self, transport: T) -> RequestResult {
+        let mut reader = transport.transmit(self)
+            .map_err(RequestError::TransportError)?;
+
+        parse_response(&mut reader).map_err(RequestError::ParseError)
     }
 
-    /// Calls the method, giving the closure a chance to amend the reqwest
-    /// `RequestBuilder` before sending.
-    pub fn call_with<F>(&self, client: &Client, url: &str, cb: F) -> RequestResult
-        where F: Fn(&mut RequestBuilder)
-    {
-        // First, build the body XML
-        let mut body = Vec::new();
-        // This unwrap never panics as we are using `Vec<u8>` as a `Write` implementor,
-        // and not doing anything else that could return an `Err` in `write_as_xml()`.
-        self.write_as_xml(&mut body).unwrap();
-
-        // Send XML-RPC request
-        let mut builder = client.post(url);
-        builder
-            .header(UserAgent::new("Rust xmlrpc"))
-            .header(ContentType("text/xml; charset=utf-8".parse().unwrap()))
-            .header(ContentLength(body.len() as u64))
-            .body(Body::new(Cursor::new(body)));
-        cb(&mut builder);
-        let mut response = builder.send()?;
-
-        // FIXME Check that the response headers are correct
-        if response.status() != StatusCode::Ok {
-            Err(RequestError::HttpStatus(format!("{}", response.status())))
-        } else {
-            // Read the response and parse it
-            // FIXME `BufRead`?
-            Ok(parse_response(&mut response)?)
-        }
+    /// Performs the request on a URL.
+    ///
+    /// This is a convenience method that will internally create a new `reqwest::Client` and send a
+    /// POST HTTP request to the given URL. If you only use this method to perform requests, you
+    /// don't need to depend on `reqwest` yourself.
+    ///
+    /// This method is only available when the `reqwest` feature is enabled (this is the default).
+    #[cfg(feature = "reqwest")]
+    pub fn call_url(&self, url: &str) -> RequestResult {
+        self.call(reqwest::Client::new().post(url))
     }
 
     /// Formats this `Request` as XML.
