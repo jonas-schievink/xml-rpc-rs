@@ -12,11 +12,47 @@ use std::collections::BTreeMap;
 
 /// A request could not be executed.
 ///
-/// This is either a lower-level error (for example, the HTTP request failed), or a problem with the
-/// server (maybe it's not implementing XML-RPC correctly). If the server sends a valid response,
-/// this error will not occur.
+/// This can be a lower-level error (for example, the HTTP request failed), a problem with the
+/// server (maybe it's not implementing XML-RPC correctly), or just a failure to execute the
+/// operation.
 #[derive(Debug)]
-pub enum RequestError {
+pub struct RequestError(RequestErrorKind);
+
+impl RequestError {
+    /// If this `RequestError` was caused by the server responding with a `<fault>` response,
+    /// returns the `Fault` in question.
+    pub fn fault(&self) -> Option<&Fault> {
+        match self.0 {
+            RequestErrorKind::Fault(ref fault) => Some(fault),
+            _ => None,
+        }
+    }
+}
+
+impl From<RequestErrorKind> for RequestError {
+    fn from(kind: RequestErrorKind) -> Self {
+        RequestError(kind)
+    }
+}
+
+impl Display for RequestError {
+    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        self.0.fmt(fmt)
+    }
+}
+
+impl Error for RequestError {
+    fn description(&self) -> &str {
+        self.0.description()
+    }
+
+    fn cause(&self) -> Option<&Error> {
+        self.0.cause()
+    }
+}
+
+#[derive(Debug)]
+pub enum RequestErrorKind {
     /// The response could not be parsed. This can happen when the server doesn't correctly
     /// implement the XML-RPC spec.
     ParseError(ParseError),
@@ -24,41 +60,47 @@ pub enum RequestError {
     /// A communication error originating from the transport used to perform the request.
     TransportError(Box<Error + 'static>),
 
-    // FIXME use the RFC 2008 solution when stable
-    #[doc(hidden)]
-    __NonExhaustive,
+    /// The server returned a `<fault>` response, indicating that the execution of the call
+    /// encountered a problem (for example, an invalid (number of) arguments was passed).
+    Fault(Fault),
 }
 
-impl From<ParseError> for RequestError {
+impl From<ParseError> for RequestErrorKind {
     fn from(e: ParseError) -> Self {
-        RequestError::ParseError(e)
+        RequestErrorKind::ParseError(e)
     }
 }
 
-impl Display for RequestError {
+impl From<Fault> for RequestErrorKind {
+    fn from(f: Fault) -> Self {
+        RequestErrorKind::Fault(f)
+    }
+}
+
+impl Display for RequestErrorKind {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         match *self {
-            RequestError::ParseError(ref err) => write!(fmt, "parse error: {}", err),
-            RequestError::TransportError(ref err) => write!(fmt, "transport error: {}", err),
-            RequestError::__NonExhaustive => unreachable!(),
+            RequestErrorKind::ParseError(ref err) => write!(fmt, "parse error: {}", err),
+            RequestErrorKind::TransportError(ref err) => write!(fmt, "transport error: {}", err),
+            RequestErrorKind::Fault(ref err) => write!(fmt, "{}", err),
         }
     }
 }
 
-impl Error for RequestError {
+impl Error for RequestErrorKind {
     fn description(&self) -> &str {
         match *self {
-            RequestError::ParseError(_) => "parse error",
-            RequestError::TransportError(_) => "transport error",
-            RequestError::__NonExhaustive => unreachable!(),
+            RequestErrorKind::ParseError(_) => "parse error",
+            RequestErrorKind::TransportError(_) => "transport error",
+            RequestErrorKind::Fault(_) => "server returned a fault",
         }
     }
 
     fn cause(&self) -> Option<&Error> {
         match *self {
-            RequestError::ParseError(ref err) => Some(err),
-            RequestError::TransportError(ref err) => Some(err.as_ref()),
-            RequestError::__NonExhaustive => unreachable!(),
+            RequestErrorKind::ParseError(ref err) => Some(err),
+            RequestErrorKind::TransportError(ref err) => Some(err.as_ref()),
+            RequestErrorKind::Fault(ref err) => Some(err),
         }
     }
 }
@@ -140,7 +182,7 @@ impl Error for ParseError {
     }
 }
 
-/// A `<fault>` response - The call failed.
+/// A `<fault>` response, indicating that a request failed.
 ///
 /// The XML-RPC specification requires that a `<faultCode>` and `<faultString>` is returned in the
 /// `<fault>` case, further describing the error.
@@ -153,7 +195,8 @@ pub struct Fault {
 impl Fault {
     /// Creates a `Fault` from a `Value`.
     ///
-    /// The `Value` must be a `Value::Struct` with a `faultCode` and `faultString` field.
+    /// The `Value` must be a `Value::Struct` with a `faultCode` and `faultString` field (and no
+    /// other fields).
     ///
     /// Returns `None` if the value isn't a valid `Fault`.
     pub fn from_value(value: &Value) -> Option<Self> {
@@ -207,6 +250,8 @@ impl Error for Fault {
 mod tests {
     use super::*;
 
+    use std::error::Error;
+
     #[test]
     fn fault_roundtrip() {
         let input = Fault {
@@ -215,5 +260,12 @@ mod tests {
         };
 
         assert_eq!(Fault::from_value(&input.to_value()), Some(input));
+    }
+
+    #[test]
+    fn error_impls_error() {
+        fn assert_error<T: Error>() {}
+
+        assert_error::<RequestError>();
     }
 }

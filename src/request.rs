@@ -1,8 +1,8 @@
 #[cfg(feature = "reqwest")]
 extern crate reqwest;
 
-use {Value, Response};
-use error::RequestError;
+use Value;
+use error::{RequestError, RequestErrorKind};
 use utils::escape_xml;
 use transport::Transport;
 use parser::parse_response;
@@ -39,9 +39,12 @@ impl<'a> Request<'a> {
     /// (according to the rules of XML-RPC).
     pub fn call<T: Transport>(&self, transport: T) -> RequestResult {
         let mut reader = transport.transmit(self)
-            .map_err(RequestError::TransportError)?;
+            .map_err(RequestErrorKind::TransportError)?;
 
-        parse_response(&mut reader).map_err(RequestError::ParseError)
+        let response = parse_response(&mut reader).map_err(RequestErrorKind::ParseError)?;
+
+        let value = response.map_err(RequestErrorKind::Fault)?;
+        Ok(value)
     }
 
     /// Performs the request on a URL.
@@ -89,11 +92,7 @@ impl<'a> Request<'a> {
 }
 
 /// The result of executing a request.
-///
-/// When the request was executed without major errors (like an HTTP error or a malformed response),
-/// this is `Ok`. The `Response` can still denote a `Fault` if the server returned a `<fault>`
-/// response.
-pub type RequestResult = Result<Response, RequestError>;
+pub type RequestResult = Result<Value, RequestError>;
 
 #[cfg(test)]
 mod tests {

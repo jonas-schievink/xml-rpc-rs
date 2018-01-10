@@ -13,8 +13,6 @@ fn main() {
 
     println!("Result: {:?}", request_result);
 
-    // The first `.unwrap()` asserts that the request was sent successfully, the second one asserts
-    // that the server didn't respond with an error response ("fault").
-    let pow_result = request_result.unwrap().unwrap();
+    let pow_result = request_result.unwrap();
     assert_eq!(pow_result, Value::Int(2i32.pow(8)));
 }

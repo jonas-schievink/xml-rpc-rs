@@ -23,8 +23,3 @@ pub use transport::Transport;
 
 #[cfg(feature = "reqwest")]
 pub use transport::http;
-
-/// A response from the server.
-///
-/// XML-RPC specifies that a call should either return a single `Value`, or a `<fault>`.
-pub type Response = Result<Value, Fault>;

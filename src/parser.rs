@@ -1,6 +1,6 @@
 //! XML-RPC response parser.
 
-use {Value, Response, Fault};
+use {Value, Fault};
 use error::ParseError;
 
 use base64;
@@ -12,7 +12,12 @@ use iso8601::datetime;
 use std::io::{self, ErrorKind, Read};
 use std::collections::BTreeMap;
 
-pub type ParseResult<T> = Result<T, ParseError>;
+/// A response from the server.
+///
+/// XML-RPC specifies that a call should either return a single `Value`, or a `<fault>`.
+pub type Response = Result<Value, Fault>;
+
+type ParseResult<T> = Result<T, ParseError>;
 
 pub struct Parser<'a, R: Read + 'a> {
     reader: EventReader<&'a mut R>,
@@ -157,7 +162,7 @@ impl<'a, R: Read> Parser<'a, R> {
         Ok(response)
     }
 
-    pub fn parse_value(&mut self) -> ParseResult<Value> {
+    fn parse_value(&mut self) -> ParseResult<Value> {
         // <value>
         self.expect_open("value")?;
 
@@ -333,7 +338,7 @@ pub fn parse_response<R: Read>(reader: &mut R) -> ParseResult<Response> {
 mod tests {
     use super::*;
 
-    use {Response, Value};
+    use Value;
     use error::Fault;
     use std::fmt::Debug;
 
