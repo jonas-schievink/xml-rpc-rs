@@ -103,6 +103,12 @@ impl From<i32> for Value {
     }
 }
 
+impl From<i64> for Value {
+    fn from(other: i64) -> Self {
+        Value::Int64(other)
+    }
+}
+
 impl From<bool> for Value {
     fn from(other: bool) -> Self {
         Value::Bool(other)
