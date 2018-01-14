@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::io::{self, Write};
 
 /// The possible XML-RPC values.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     /// `<i4>` or `<int>`, 32-bit signed integer.
     Int(i32),

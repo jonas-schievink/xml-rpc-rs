@@ -11,6 +11,7 @@ use std::io::{self, Write};
 use std::collections::BTreeMap;
 
 /// A request to call a procedure.
+#[derive(Clone, Debug)]
 pub struct Request<'a> {
     name: &'a str,
     args: Vec<Value>,
