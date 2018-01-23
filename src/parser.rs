@@ -168,7 +168,7 @@ impl<'a, R: Read> Parser<'a, R> {
 
         if let Ok(()) = self.expect_close("value") {
             // empty value, parse as empty string
-            return Ok(Value::String(String::new()));
+            return Ok(Value::String(Vec::new()));
         }
 
         let value = self.parse_value_inner()?;
@@ -238,19 +238,19 @@ impl<'a, R: Read> Parser<'a, R> {
                     }
                     "string" => {
                         self.next()?;
-                        let string = match self.cur.clone() {
+                        let bytes = match self.cur.clone() {
                             XmlEvent::Characters(string) => {
                                 self.next()?;
                                 self.expect_close("string")?;
-                                string
+                                string.into_bytes()
                             },
                             XmlEvent::EndElement { ref name } if name.local_name == "string" => {
                                 self.next()?;
-                                String::new()
+                                Vec::new()
                             },
                             _ => return self.expected("characters or </string>"),
                         };
-                        Value::String(string)
+                        Value::String(bytes)
                     }
                     "base64" => {
                         self.next()?;
@@ -320,7 +320,7 @@ impl<'a, R: Read> Parser<'a, R> {
             }
             XmlEvent::Characters(string) => {
                 self.next()?;
-                Value::String(string)
+                Value::String(string.into_bytes())
             }
             _ => return self.expected("type tag or characters"),
         };
@@ -338,8 +338,7 @@ pub fn parse_response<R: Read>(reader: &mut R) -> ParseResult<Response> {
 mod tests {
     use super::*;
 
-    use Value;
-    use error::Fault;
+    use {Value, Fault};
     use std::fmt::Debug;
 
     fn read_response(xml: &str) -> ParseResult<Response> {
@@ -414,10 +413,7 @@ mod tests {
          </value>
       </fault>
    </methodResponse>"##),
-        Ok(Err(Fault {
-            fault_code: 4,
-            fault_string: "Too many parameters.".into(),
-        })));
+        Ok(Err(Fault::new(4, "Too many parameters.".into()))));
     }
 
     #[test]
@@ -558,15 +554,15 @@ mod tests {
     #[test]
     fn parses_empty_string() {
         assert_eq!(read_value("<value><string></string></value>"),
-            Ok(Value::String(String::new())));
+            Ok(Value::String(Vec::new())));
         assert_eq!(read_value("<value><string/></value>"),
-            Ok(Value::String(String::new())));
+            Ok(Value::String(Vec::new())));
     }
 
     #[test]
     fn parses_empty_value_as_string() {
         assert_eq!(read_value("<value></value>"),
-                   Ok(Value::String(String::new())));
+                   Ok(Value::String(Vec::new())));
     }
 
     #[test]

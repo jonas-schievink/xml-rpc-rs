@@ -10,13 +10,15 @@ extern crate iso8601;
 extern crate xml;
 
 mod error;
+mod fault;
 mod parser;
 mod request;
 mod value;
 mod utils;
 mod transport;
 
-pub use error::{RequestError, Fault};
+pub use fault::Fault;
+pub use error::RequestError;
 pub use request::{Request, RequestResult};
 pub use value::Value;
 pub use transport::Transport;

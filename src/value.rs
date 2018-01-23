@@ -1,12 +1,13 @@
 //! Contains the different types of values understood by XML-RPC.
 
-use utils::{escape_xml, format_datetime};
+use utils::{escape_xml, escape_xml_bytes, format_datetime};
 
 use base64::encode;
 use iso8601::DateTime;
 
 use std::collections::BTreeMap;
 use std::io::{self, Write};
+use std::str;
 
 /// The possible XML-RPC values.
 #[derive(Clone, Debug, PartialEq)]
@@ -19,9 +20,12 @@ pub enum Value {
     Int64(i64),
     /// `<boolean>`, 0 == `false`, 1 == `true`.
     Bool(bool),
-    /// `<string>`
-    // FIXME zero-copy? `Cow<'static, ..>`?
-    String(String),
+    /// `<string>`, usually used for text, but is able to transfer (XML-escaped) binary data.
+    ///
+    /// For convenience, you can use the [`to_str`] method to access a UTF-8 encoded `<string>`.
+    ///
+    /// [`to_str`]: #method.to_str
+    String(Vec<u8>),
     /// `<double>`
     Double(f64),
     /// `<dateTime.iso8601>`, an ISO 8601 formatted date/time value.
@@ -43,6 +47,17 @@ pub enum Value {
 }
 
 impl Value {
+    /// Convenience method to access a UTF-8 encoded `<string>`.
+    ///
+    /// If `self` is a `Value::String`, and the string content is valid UTF-8, returns it as a
+    /// `&str`. If `self` is some other kind of `Value` or a non-UTF-8 string, returns `None`.
+    pub fn to_str(&self) -> Option<&str> {
+        match *self {
+            Value::String(ref bytes) => str::from_utf8(bytes).ok(),
+            _ => None,
+        }
+    }
+
     /// Formats this `Value` as an XML `<value>` element.
     pub fn write_as_xml<W: Write>(&self, fmt: &mut W) -> io::Result<()> {
         writeln!(fmt, "<value>")?;
@@ -58,7 +73,9 @@ impl Value {
                 writeln!(fmt, "<boolean>{}</boolean>", if b { "1" } else { "0" })?;
             }
             Value::String(ref s) => {
-                writeln!(fmt, "<string>{}</string>", escape_xml(s))?;
+                write!(fmt, "<string>")?;
+                fmt.write_all(&escape_xml_bytes(s))?;
+                writeln!(fmt, "</string>")?;
             }
             Value::Double(d) => {
                 writeln!(fmt, "<double>{}</double>", d)?;
@@ -118,13 +135,13 @@ impl From<bool> for Value {
 
 impl From<String> for Value {
     fn from(other: String) -> Self {
-        Value::String(other)
+        Value::String(other.into_bytes())
     }
 }
 
 impl<'a> From<&'a str> for Value {
     fn from(other: &'a str) -> Self {
-        Value::String(other.to_string())
+        Value::String(other.to_string().into_bytes())
     }
 }
 

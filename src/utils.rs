@@ -5,6 +5,19 @@ pub fn escape_xml(s: &str) -> String {
     s.replace("&", "&amp;").replace("<", "&lt;")
 }
 
+pub fn escape_xml_bytes(bytes: &[u8]) -> Vec<u8> {
+    // FIXME: This shouldn't need to allocate in all cases
+    let mut v = Vec::with_capacity(bytes.len());
+    for &byte in bytes {
+        match &[byte] {
+            b"&" => v.extend_from_slice(b"&amp;"),
+            b"<" => v.extend_from_slice(b"&lt;"),
+            _ => v.push(byte),
+        }
+    }
+    v
+}
+
 pub fn format_datetime(date_time: &iso8601::DateTime) -> String {
     let iso8601::Time { hour, minute, second, .. } = date_time.time;
     
