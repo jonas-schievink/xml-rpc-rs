@@ -34,7 +34,7 @@ pub enum Value {
     /// `<array>`, a list of arbitrary (heterogeneous) values.
     Array(Vec<Value>),
 
-    /// `</nil>`, the empty (Unit) value.
+    /// `<nil/>`, the empty (Unit) value.
     ///
     /// This is an XMLRPC [extension][ext] and may not be supported by all clients / servers.
     ///
