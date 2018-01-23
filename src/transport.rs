@@ -31,23 +31,28 @@ pub trait Transport {
     fn transmit(self, request: &Request) -> Result<Self::Stream, Box<Error>>;
 }
 
+// FIXME: Link to `Transport` and `RequestBuilder` using intra-rustdoc links. Relative links break
+// everything and abs. links don't work locally.
 /// Provides helpers for implementing custom `Transport`s using reqwest.
 ///
 /// This module will be disabled if the `reqwest` feature is not enabled.
 ///
-/// The default `Transport` implementation for `RequestBuilder` looks roughly like this:
+/// The default [`Transport`][transport] implementation for `RequestBuilder` looks roughly like
+/// this:
 ///
 /// ```notrust
 /// // serialize request into `body` (a `Vec<u8>`)
 ///
 /// build_headers(builder, body.len());
 ///
-/// // send `body` using `builder`, ensure server returned 200 OK
+/// // send `body` using `builder` and get response
 ///
 /// check_response(&response)?;
 /// ```
 ///
 /// From this, you can build your own custom transports.
+///
+/// [transport]: trait.Transport.html
 #[cfg(feature = "reqwest")]
 pub mod http {
     extern crate reqwest;
@@ -77,10 +82,17 @@ pub mod http {
             .header(ContentLength(body_len));
     }
 
-    /// Checks that a reqwest `Response` contains all headers mandated by the spec.
+    /// Checks that a reqwest `Response` has a status code indicating success and contains all
+    /// headers mandated by the spec.
     ///
     /// This is done by default to ensure compliance.
     pub fn check_response(response: &reqwest::Response) -> Result<(), Box<Error>> {
+        // This is essentially an open-coded version of `Response::error_for_status` that does not
+        // consume the response.
+        if response.status().is_client_error() || response.status().is_server_error() {
+            return Err(format!("server response indicates error: {}", response.status()).into());
+        }
+
         // Check response headers
         // "The Content-Type is text/xml. Content-Length must be present and correct."
         if let Some(content) = response.headers().get::<ContentType>() {
@@ -117,8 +129,7 @@ pub mod http {
 
             let response = self
                 .body(body)
-                .send()?
-                .error_for_status()?;
+                .send()?;
 
             check_response(&response)?;
 
