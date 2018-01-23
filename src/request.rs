@@ -34,10 +34,13 @@ impl<'a> Request<'a> {
         self
     }
 
-    /// Performs the request using a `transport`.
+    /// Performs the request using a [`Transport`].
     ///
-    /// Returns a `RequestResult` indicating whether the request was sent and processed successfully
-    /// (according to the rules of XML-RPC).
+    /// Returns a [`RequestResult`] indicating whether the request was sent and processed
+    /// successfully (according to the rules of XML-RPC).
+    ///
+    /// [`Transport`]: trait.Transport.html
+    /// [`RequestResult`]: type.RequestResult.html
     pub fn call<T: Transport>(&self, transport: T) -> RequestResult {
         let mut reader = transport.transmit(self)
             .map_err(RequestErrorKind::TransportError)?;
