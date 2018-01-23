@@ -6,15 +6,18 @@ use std::error::Error;
 /// Request and response transport abstraction.
 ///
 /// The `Transport` trait provides a way to send a `Request` to a server and to receive the
-/// corresponding response. A `Transport` implementor is passed to `Request::call` in order to use
+/// corresponding response. A `Transport` implementor is passed to [`Request::call`] in order to use
 /// it to perform that request.
 ///
 /// The most commonly used transport is simple HTTP: If the `reqwest` feature is enabled (it is by
-/// default), the reqwest `RequestBuilder` will implement this trait and send the XML-RPC `Request`
-/// via HTTP.
+/// default), the reqwest `RequestBuilder` will implement this trait and send the XML-RPC
+/// [`Request`] via HTTP.
 ///
 /// You can implement this trait for your own types if you want to customize how requests are sent.
 /// You can modify HTTP headers or wrap requests in a completely different protocol.
+///
+/// [`Request::call`]: struct.Request.html#method.call
+/// [`Request`]: struct.Request.html
 pub trait Transport {
     // FIXME replace with `impl Trait` when stable
     /// The response stream returned by `transmit`.
@@ -27,7 +30,9 @@ pub trait Transport {
     /// otherwise the call will fail.
     ///
     /// If a transport error occurs, this should return it as a boxed error - the library will
-    /// interpret it as a transport error and return an appropriate `RequestError`.
+    /// interpret it as a transport error and return an appropriate [`RequestError`].
+    ///
+    /// [`RequestError`]: struct.RequestError.html
     fn transmit(self, request: &Request) -> Result<Self::Stream, Box<Error>>;
 }
 
