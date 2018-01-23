@@ -52,7 +52,7 @@ pub trait Transport {
 ///
 /// From this, you can build your own custom transports.
 ///
-/// [transport]: trait.Transport.html
+/// [transport]: ../trait.Transport.html
 #[cfg(feature = "reqwest")]
 pub mod http {
     extern crate reqwest;
