@@ -15,8 +15,7 @@ pub enum Value {
     Int(i32),
     /// `<i8>`, 64-bit signed integer.
     ///
-    /// This is a non-standard feature that may not be supported on all servers
-    /// or clients.
+    /// This is an XMLRPC extension and may not be supported by all clients / servers.
     Int64(i64),
     /// `<boolean>`, 0 == `false`, 1 == `true`.
     Bool(bool),
@@ -35,9 +34,11 @@ pub enum Value {
     /// `<array>`, a list of arbitrary (heterogeneous) values.
     Array(Vec<Value>),
 
-    /// `</nil>`
+    /// `</nil>`, the empty (Unit) value.
     ///
-    /// Ref: https://web.archive.org/web/20050911054235/http://ontosys.com/xml-rpc/extensions.php
+    /// This is an XMLRPC [extension][ext] and may not be supported by all clients / servers.
+    ///
+    /// [ext]: https://web.archive.org/web/20050911054235/http://ontosys.com/xml-rpc/extensions.php
     Nil
 }
 
