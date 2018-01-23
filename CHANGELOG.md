@@ -9,6 +9,8 @@
 * Removed `From<Vec<u8>>` impl of `Value`
 * Removed the nested `Result` you get when performing a call
 * Restructure the `RequestError` type to better hide details the user shouldn't need to see
+* `Fault`s fields were made private, new constructor methods should be used instead
+* The API was changed to prepare for the support of non-UTF-8 requests (eg. `Value::String` now contains a `Vec<u8>` instead of a `String` - you can access a UTF-8 string with `.to_str()`)
 
 ### New Features
 
