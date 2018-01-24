@@ -7,7 +7,7 @@ use utils::escape_xml;
 use transport::Transport;
 use parser::parse_response;
 
-use std::io::{self, Write};
+use std::io::{self, Write, BufReader};
 use std::collections::BTreeMap;
 
 /// A request to call a procedure.
@@ -44,6 +44,7 @@ impl<'a> Request<'a> {
     pub fn call<T: Transport>(&self, transport: T) -> RequestResult {
         let mut reader = transport.transmit(self)
             .map_err(RequestErrorKind::TransportError)?;
+        let mut reader = BufReader::new(reader);
 
         let response = parse_response(&mut reader).map_err(RequestErrorKind::ParseError)?;
 
@@ -86,10 +87,10 @@ impl<'a> Request<'a> {
     /// * `methodName`: the request name
     /// * `params`: the request arguments
     pub fn into_multicall_struct(self) -> Value {
-        let mut multicall_struct: BTreeMap<String, Value> = BTreeMap::new();
+        let mut multicall_struct: BTreeMap<Vec<u8>, _> = BTreeMap::new();
 
-        multicall_struct.insert("methodName".into(), self.name.into());
-        multicall_struct.insert("params".into(), Value::Array(self.args));
+        multicall_struct.insert(b"methodName".to_vec(), self.name.into());
+        multicall_struct.insert(b"params".to_vec(), Value::Array(self.args));
 
         Value::Struct(multicall_struct)
     }

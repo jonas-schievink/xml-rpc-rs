@@ -7,7 +7,7 @@
 
 extern crate base64;
 extern crate iso8601;
-extern crate xml;
+extern crate quick_xml;
 
 mod error;
 mod fault;

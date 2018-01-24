@@ -2,12 +2,12 @@
 
 use Fault;
 
-use xml::reader::Error as XmlError;
-use xml::common::TextPosition;
+use quick_xml::errors::Error as XmlError;
 
 use std::io;
 use std::fmt::{self, Formatter, Display};
 use std::error::Error;
+use std::str::Utf8Error;
 
 /// A request could not be executed.
 ///
@@ -105,7 +105,7 @@ impl Error for RequestErrorKind {
 }
 
 /// Describes possible error that can occur when parsing a `Response`.
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum ParseError {
     /// Error while parsing (malformed?) XML.
     XmlError(XmlError),
@@ -118,8 +118,8 @@ pub enum ParseError {
         for_type: &'static str,
         /// The value we encountered, as a string.
         found: String,
-        /// The position of the invalid value inside the XML document.
-        position: TextPosition,
+        /// The byte position of the invalid value inside the XML document.
+        position: usize,
     },
 
     /// Found an unexpected tag, attribute, etc.
@@ -127,9 +127,17 @@ pub enum ParseError {
         /// A short description of the kind of data that was expected.
         expected: String,
         found: Option<String>,
-        /// The position of the unexpected data inside the XML document.
-        position: TextPosition,
-    }
+        /// The byte position of the unexpected data inside the XML document.
+        position: usize,
+    },
+
+    /// Got invalid UTF-8 for a part of the request / response where UTF-8 is required.
+    ///
+    /// This is limited to the parsing of primitive values. Strings and names should support
+    /// arbitrary bytes.
+    ///
+    // FIXME: Use some encoding lib and remove this
+    Utf8Error(Utf8Error),
 }
 
 impl From<XmlError> for ParseError {
@@ -140,7 +148,13 @@ impl From<XmlError> for ParseError {
 
 impl From<io::Error> for ParseError {
     fn from(e: io::Error) -> Self {
-        ParseError::XmlError(XmlError::from(e))
+        ParseError::XmlError(XmlError::Io(e))
+    }
+}
+
+impl From<Utf8Error> for ParseError {
+    fn from(e: Utf8Error) -> Self {
+        ParseError::Utf8Error(e)
     }
 }
 
@@ -152,20 +166,20 @@ impl Display for ParseError {
                 for_type,
                 ref found,
                 ref position,
-            } => write!(fmt, "invalid value for type '{}' at {}: {}", for_type, position, found),
+            } => write!(fmt, "invalid value for type '{}' at offset {}: {}", for_type, position, found),
             ParseError::UnexpectedXml {
                 ref expected,
                 ref position,
                 found: None,
             } => {
-                write!(fmt, "unexpected XML at {} (expected {})", position, expected)
+                write!(fmt, "unexpected XML at offset {} (expected {})", position, expected)
             }
             ParseError::UnexpectedXml {
                 ref expected,
                 ref position,
                 found: Some(ref found),
             } => {
-                write!(fmt, "unexpected XML at {} (expected {}, found {})", position, expected, found)
+                write!(fmt, "unexpected XML at offset {} (expected {}, found {})", position, expected, found)
             }
         }
     }
@@ -174,7 +188,7 @@ impl Display for ParseError {
 impl Error for ParseError {
     fn description(&self) -> &str {
         match *self {
-            ParseError::XmlError(ref err) => err.description(),
+            ParseError::XmlError(..) => "XML error",
             ParseError::InvalidValue { .. } => "invalid value for type",
             ParseError::UnexpectedXml { .. } => "unexpected XML content",
         }

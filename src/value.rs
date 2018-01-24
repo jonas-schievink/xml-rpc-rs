@@ -1,6 +1,6 @@
 //! Contains the different types of values understood by XML-RPC.
 
-use utils::{escape_xml, escape_xml_bytes, format_datetime};
+use utils::{escape_xml_bytes, format_datetime};
 
 use base64::encode;
 use iso8601::DateTime;
@@ -34,7 +34,8 @@ pub enum Value {
     Base64(Vec<u8>),
 
     /// `<struct>`, a mapping of named values.
-    Struct(BTreeMap<String, Value>),
+    // FIXME: Wrap this so stringy access is nicer and hides the btreemap
+    Struct(BTreeMap<Vec<u8>, Value>),
     /// `<array>`, a list of arbitrary (heterogeneous) values.
     Array(Vec<Value>),
 
@@ -90,7 +91,9 @@ impl Value {
                 writeln!(fmt, "<struct>")?;
                 for (ref name, ref value) in map {
                     writeln!(fmt, "<member>")?;
-                    writeln!(fmt, "<name>{}</name>", escape_xml(name))?;
+                    write!(fmt, "<name>")?;
+                    fmt.write_all(&escape_xml_bytes(name))?;
+                    write!(fmt, "</name>")?;
                     value.write_as_xml(fmt)?;
                     writeln!(fmt, "</member>")?;
                 }

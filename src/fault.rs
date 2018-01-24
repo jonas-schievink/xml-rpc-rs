@@ -81,7 +81,7 @@ impl Fault {
                     return None;
                 }
 
-                match (map.get("faultCode"), map.get("faultString")) {
+                match (map.get(&b"faultCode"[..]), map.get(&b"faultString"[..])) {
                     (Some(&Value::Int(fault_code)), Some(&Value::String(ref fault_string))) => {
                         Some(Fault::from_raw_string(fault_code, fault_string.to_vec()))
                     }
@@ -98,8 +98,8 @@ impl Fault {
     /// as a `<fault>` error response by serializing it into a `<fault></fault>` tag.
     pub fn to_value(&self) -> Value {
         let mut map = BTreeMap::new();
-        map.insert("faultCode".to_string(), Value::from(self.code()));
-        map.insert("faultString".to_string(), Value::String(self.string_as_bytes().to_vec()));
+        map.insert(b"faultCode".to_vec(), Value::from(self.code()));
+        map.insert(b"faultString".to_vec(), Value::String(self.string_as_bytes().to_vec()));
 
         Value::Struct(map)
     }
