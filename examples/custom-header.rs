@@ -30,8 +30,7 @@ impl Transport for MyTransport {
 
         let response = self.0
             .body(body)
-            .send()?
-            .error_for_status()?;
+            .send()?;
 
         check_response(&response)?;
 
