@@ -29,6 +29,7 @@ impl RequestError {
     }
 }
 
+#[doc(hidden)]  // hide internal impl
 impl From<RequestErrorKind> for RequestError {
     fn from(kind: RequestErrorKind) -> Self {
         RequestError(kind)
