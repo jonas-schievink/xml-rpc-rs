@@ -209,7 +209,7 @@ impl Value {
         }
     }
 
-    /// If the `Value` is a binary data, returns associated value. Returns `None` otherwise.
+    /// If the `Value` is base64 binary data, returns associated value. Returns `None` otherwise.
     pub fn as_bytes(&self) -> Option<&[u8]> {
         match *self {
             Value::Base64(ref data) => Some(data),
