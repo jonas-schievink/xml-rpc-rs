@@ -10,8 +10,11 @@ use std::io::{self, Write};
 
 /// The possible XML-RPC values.
 ///
-/// Nested values can be accessed by using [`get`](#method.get) method and [square-bracket indexing operator](#impl-Index%3CI%3E).
-/// A string index can be used to access a value in a `Struct`, and a usize index can be used to access an element of an `Array`.
+/// Nested values can be accessed by using [`get`](#method.get) method and Rust's square-bracket
+/// indexing operator.
+///
+/// A string index can be used to access a value in a `Struct`, and a `usize` index can be used to
+/// access an element of an `Array`.
 ///
 /// # Examples
 ///
@@ -79,7 +82,7 @@ pub enum Value {
     /// This is an XMLRPC [extension][ext] and may not be supported by all clients / servers.
     ///
     /// [ext]: https://web.archive.org/web/20050911054235/http://ontosys.com/xml-rpc/extensions.php
-    Nil
+    Nil,
 }
 
 impl Value {
@@ -137,12 +140,24 @@ impl Value {
         Ok(())
     }
 
-    /// Returns existing inner value indexed by `index`. Returns None otherwise.
+    /// Returns an inner struct or array value indexed by `index`.
+    ///
+    /// Returns `None` if the member doesn't exist or `self` is neither a struct nor an array.
+    ///
+    /// You can also use Rust's square-bracket indexing syntax to perform this operation if you want
+    /// a default value instead of an `Option`. Refer to the top-level [examples](#examples) for
+    /// details.
     pub fn get<I: Index>(&self, index: I) -> Option<&Value> {
         index.get(self)
     }
 
-    /// If the `Value` is an integer representable as i32, returns associated value. Returns None otherwise.
+    /// If the `Value` is a normal integer (`Value::Int`), returns associated value. Returns `None`
+    /// otherwise.
+    ///
+    /// In particular, `None` is also returned if `self` is a `Value::Int64`. Use [`as_i64`] to
+    /// handle this case.
+    ///
+    /// [`as_i64`]: #method.as_i64
     pub fn as_i32(&self) -> Option<i32> {
         match *self {
             Value::Int(i) => Some(i),
@@ -150,7 +165,9 @@ impl Value {
         }
     }
 
-    /// If the `Value` is an integer, returns associated value. Returns None otherwise.
+    /// If the `Value` is an integer, returns associated value. Returns `None` otherwise.
+    ///
+    /// This works with both `Value::Int` and `Value::Int64`.
     pub fn as_i64(&self) -> Option<i64> {
         match *self {
             Value::Int(i) => Some(i64::from(i)),
@@ -159,7 +176,7 @@ impl Value {
         }
     }
 
-    /// If the `Value` is a boolean, returns associated value. Returns None otherwise.
+    /// If the `Value` is a boolean, returns associated value. Returns `None` otherwise.
     pub fn as_bool(&self) -> Option<bool> {
         match *self {
             Value::Bool(b) => Some(b),
@@ -167,7 +184,7 @@ impl Value {
         }
     }
 
-    /// If the `Value` is a string, returns associated value. Returns None otherwise.
+    /// If the `Value` is a string, returns associated value. Returns `None` otherwise.
     pub fn as_str(&self) -> Option<&str> {
         match *self {
             Value::String(ref s) => Some(s),
@@ -175,7 +192,8 @@ impl Value {
         }
     }
 
-    /// If the `Value` is a floating point number, returns associated value. Returns None otherwise.
+    /// If the `Value` is a floating point number, returns associated value. Returns `None`
+    /// otherwise.
     pub fn as_f64(&self) -> Option<f64> {
         match *self {
             Value::Double(d) => Some(d),
@@ -183,7 +201,7 @@ impl Value {
         }
     }
 
-    /// If the `Value` is a date/time, returns associated value. Returns None otherwise.
+    /// If the `Value` is a date/time, returns associated value. Returns `None` otherwise.
     pub fn as_datetime(&self) -> Option<DateTime> {
         match *self {
             Value::DateTime(dt) => Some(dt),
@@ -191,7 +209,7 @@ impl Value {
         }
     }
 
-    /// If the `Value` is a binary data, returns associated value. Returns None otherwise.
+    /// If the `Value` is a binary data, returns associated value. Returns `None` otherwise.
     pub fn as_bytes(&self) -> Option<&[u8]> {
         match *self {
             Value::Base64(ref data) => Some(data),
@@ -199,7 +217,7 @@ impl Value {
         }
     }
 
-    /// If the `Value` is a struct, returns associated map. Returns None otherwise.
+    /// If the `Value` is a struct, returns associated map. Returns `None` otherwise.
     pub fn as_struct(&self) -> Option<&BTreeMap<String, Value>> {
         match *self {
             Value::Struct(ref map) => Some(map),
@@ -207,7 +225,7 @@ impl Value {
         }
     }
 
-    /// If the `Value` is an array, returns associated slice. Returns None otherwise.
+    /// If the `Value` is an array, returns associated slice. Returns `None` otherwise.
     pub fn as_array(&self) -> Option<&[Value]> {
         match *self {
             Value::Array(ref array) => Some(array),
@@ -258,7 +276,7 @@ impl From<DateTime> for Value {
     }
 }
 
-/// A type that can be used to index into a `Value`
+/// A type that can be used to index into a `Value`.
 pub trait Index {
     /// Gets an inner value of a given value represented by self.
     #[doc(hidden)]
