@@ -53,8 +53,8 @@ impl<'a> Request<'a> {
 
     /// Performs the request on a URL.
     ///
-    /// This is a convenience method that will internally create a new `reqwest::Client` and send a
-    /// POST HTTP request to the given URL. If you only use this method to perform requests, you
+    /// This is a convenience method that will internally create a new `reqwest::Client` and send an
+    /// HTTP POST request to the given URL. If you only use this method to perform requests, you
     /// don't need to depend on `reqwest` yourself.
     ///
     /// This method is only available when the `reqwest` feature is enabled (this is the default).
