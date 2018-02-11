@@ -18,7 +18,7 @@ mod transport;
 
 pub use error::{RequestError, Fault};
 pub use request::{Request, RequestResult};
-pub use value::Value;
+pub use value::{Value, Index};
 pub use transport::Transport;
 
 #[cfg(feature = "reqwest")]
