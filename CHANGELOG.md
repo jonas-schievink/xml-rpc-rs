@@ -17,7 +17,8 @@
 * Add the `http` module, containing a few helper methods for writing custom reqwest-based `Transport`s
 * Derive a few more useful traits ([#34](https://github.com/jonas-schievink/xml-rpc-rs/pull/34))
 * Implement `From<i64>` for `Value` ([#33](https://github.com/jonas-schievink/xml-rpc-rs/pull/33))
-* Add methods `Value::get` and `Value::as_*`, implement `std::ops::Index` for `Value` for convenient access to a wrapped data.
+* Add methods `Value::get` and `Value::as_*`, implement `std::ops::Index` for `Value` for convenient access to wrapped
+  data ([#37](https://github.com/jonas-schievink/xml-rpc-rs/pull/37)).
 
 ## <= 0.9.0
 
