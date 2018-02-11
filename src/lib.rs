@@ -8,6 +8,8 @@
 extern crate base64;
 extern crate iso8601;
 extern crate xml;
+#[cfg(feature = "reqwest")]
+pub extern crate reqwest;
 
 mod error;
 mod parser;

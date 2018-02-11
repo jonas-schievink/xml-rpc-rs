@@ -60,11 +60,9 @@ pub trait Transport {
 /// [transport]: ../trait.Transport.html
 #[cfg(feature = "reqwest")]
 pub mod http {
-    extern crate reqwest;
-
     use {Request, Transport};
-    use self::reqwest::{RequestBuilder, mime};
-    use self::reqwest::header::{ContentType, ContentLength, UserAgent};
+    use reqwest::{RequestBuilder, mime};
+    use reqwest::header::{ContentType, ContentLength, UserAgent};
 
     use std::error::Error;
 
@@ -91,7 +89,7 @@ pub mod http {
     /// headers mandated by the spec.
     ///
     /// This is done by default to ensure compliance.
-    pub fn check_response(response: &reqwest::Response) -> Result<(), Box<Error>> {
+    pub fn check_response(response: &::reqwest::Response) -> Result<(), Box<Error>> {
         // This is essentially an open-coded version of `Response::error_for_status` that does not
         // consume the response.
         if response.status().is_client_error() || response.status().is_server_error() {
@@ -121,7 +119,7 @@ pub mod http {
     /// The request will be sent as specified in the XML-RPC specification: A default `User-Agent`
     /// will be set, along with the correct `Content-Type` and `Content-Length`.
     impl Transport for RequestBuilder {
-        type Stream = reqwest::Response;
+        type Stream = ::reqwest::Response;
 
         fn transmit(mut self, request: &Request) -> Result<Self::Stream, Box<Error>> {
             // First, build the body XML

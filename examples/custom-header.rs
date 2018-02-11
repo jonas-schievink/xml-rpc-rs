@@ -1,13 +1,13 @@
 //! This example shows how to transmit a request with a custom HTTP header.
 
 extern crate xmlrpc;
-extern crate reqwest;
 
 use xmlrpc::{Request, Transport};
 use xmlrpc::http::{build_headers, check_response};
 
-use reqwest::{Client, RequestBuilder};
-use reqwest::header::Cookie;
+// Use the reqwest crate reexported from xmlrpc
+use xmlrpc::reqwest::{Client, RequestBuilder};
+use xmlrpc::reqwest::header::Cookie;
 
 use std::error::Error;
 

@@ -1,6 +1,3 @@
-#[cfg(feature = "reqwest")]
-extern crate reqwest;
-
 use Value;
 use error::{RequestError, RequestErrorKind};
 use utils::escape_xml;
@@ -60,7 +57,7 @@ impl<'a> Request<'a> {
     /// This method is only available when the `reqwest` feature is enabled (this is the default).
     #[cfg(feature = "reqwest")]
     pub fn call_url(&self, url: &str) -> RequestResult {
-        self.call(reqwest::Client::new().post(url))
+        self.call(::reqwest::Client::new().post(url))
     }
 
     /// Formats this `Request` as XML.
