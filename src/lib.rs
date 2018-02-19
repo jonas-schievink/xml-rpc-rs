@@ -1,8 +1,8 @@
 //! An XML-RPC implementation in Rust.
 //!
-//! The `xmlrpc` crate provides a minimal implementation of the [XML-RPC spec][spec].
+//! The `xmlrpc` crate provides a minimal implementation of the [XML-RPC specification].
 //!
-//! [spec]: http://xmlrpc.scripting.com/spec.html
+//! [XML-RPC specification]: http://xmlrpc.scripting.com/spec.html
 
 #![doc(html_root_url = "https://docs.rs/xmlrpc/0.9.0")]
 
