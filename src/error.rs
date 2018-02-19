@@ -9,7 +9,7 @@ use std::{error, io};
 use std::fmt::{self, Formatter, Display};
 use std::collections::BTreeMap;
 
-/// Error that can occur when trying to perform an XML-RPC request.
+/// Errors that can occur when trying to perform an XML-RPC request.
 ///
 /// This can be a lower-level error (for example, the HTTP request failed), a problem with the
 /// server (maybe it's not implementing XML-RPC correctly), or just a failure to execute the
