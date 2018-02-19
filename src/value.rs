@@ -276,6 +276,12 @@ impl From<DateTime> for Value {
     }
 }
 
+impl From<Vec<u8>> for Value {
+    fn from(other: Vec<u8>) -> Self {
+        Value::Base64(other)
+    }
+}
+
 /// A type that can be used to index into a `Value`.
 pub trait Index {
     /// Gets an inner value of a given value represented by self.
