@@ -2,7 +2,7 @@
 extern crate reqwest;
 
 use Value;
-use error::{RequestError, RequestErrorKind};
+use error::{Error, RequestErrorKind};
 use utils::escape_xml;
 use transport::Transport;
 use parser::parse_response;
@@ -41,7 +41,7 @@ impl<'a> Request<'a> {
     ///
     /// [`Transport`]: trait.Transport.html
     /// [`RequestResult`]: type.RequestResult.html
-    pub fn call<T: Transport>(&self, transport: T) -> Result<Value, RequestError> {
+    pub fn call<T: Transport>(&self, transport: T) -> Result<Value, Error> {
         let mut reader = transport.transmit(self)
             .map_err(RequestErrorKind::TransportError)?;
 
@@ -59,7 +59,7 @@ impl<'a> Request<'a> {
     ///
     /// This method is only available when the `reqwest` feature is enabled (this is the default).
     #[cfg(feature = "reqwest")]
-    pub fn call_url(&self, url: &str) -> Result<Value, RequestError> {
+    pub fn call_url(&self, url: &str) -> Result<Value, Error> {
         self.call(reqwest::Client::new().post(url))
     }
 

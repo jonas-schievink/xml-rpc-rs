@@ -16,7 +16,7 @@ mod value;
 mod utils;
 mod transport;
 
-pub use error::{RequestError, Fault};
+pub use error::{Error, Fault};
 pub use request::Request;
 pub use value::{Value, Index};
 pub use transport::Transport;

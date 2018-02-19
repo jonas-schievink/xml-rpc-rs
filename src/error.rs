@@ -5,9 +5,8 @@ use Value;
 use xml::reader::Error as XmlError;
 use xml::common::TextPosition;
 
-use std::io;
+use std::{error, io};
 use std::fmt::{self, Formatter, Display};
-use std::error::Error;
 use std::collections::BTreeMap;
 
 /// A request could not be executed.
@@ -16,9 +15,9 @@ use std::collections::BTreeMap;
 /// server (maybe it's not implementing XML-RPC correctly), or just a failure to execute the
 /// operation.
 #[derive(Debug)]
-pub struct RequestError(RequestErrorKind);
+pub struct Error(RequestErrorKind);
 
-impl RequestError {
+impl Error {
     /// If this `RequestError` was caused by the server responding with a `<fault>` response,
     /// returns the `Fault` in question.
     pub fn fault(&self) -> Option<&Fault> {
@@ -30,24 +29,24 @@ impl RequestError {
 }
 
 #[doc(hidden)]  // hide internal impl
-impl From<RequestErrorKind> for RequestError {
+impl From<RequestErrorKind> for Error {
     fn from(kind: RequestErrorKind) -> Self {
-        RequestError(kind)
+        Error(kind)
     }
 }
 
-impl Display for RequestError {
+impl Display for Error {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         self.0.fmt(fmt)
     }
 }
 
-impl Error for RequestError {
+impl error::Error for Error {
     fn description(&self) -> &str {
         self.0.description()
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&error::Error> {
         self.0.cause()
     }
 }
@@ -59,7 +58,7 @@ pub enum RequestErrorKind {
     ParseError(ParseError),
 
     /// A communication error originating from the transport used to perform the request.
-    TransportError(Box<Error + 'static>),
+    TransportError(Box<error::Error + 'static>),
 
     /// The server returned a `<fault>` response, indicating that the execution of the call
     /// encountered a problem (for example, an invalid (number of) arguments was passed).
@@ -88,7 +87,7 @@ impl Display for RequestErrorKind {
     }
 }
 
-impl Error for RequestErrorKind {
+impl error::Error for RequestErrorKind {
     fn description(&self) -> &str {
         match *self {
             RequestErrorKind::ParseError(_) => "parse error",
@@ -97,7 +96,7 @@ impl Error for RequestErrorKind {
         }
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&error::Error> {
         match *self {
             RequestErrorKind::ParseError(ref err) => Some(err),
             RequestErrorKind::TransportError(ref err) => Some(err.as_ref()),
@@ -173,7 +172,7 @@ impl Display for ParseError {
     }
 }
 
-impl Error for ParseError {
+impl error::Error for ParseError {
     fn description(&self) -> &str {
         match *self {
             ParseError::XmlError(ref err) => err.description(),
@@ -241,7 +240,7 @@ impl Display for Fault {
     }
 }
 
-impl Error for Fault {
+impl error::Error for Fault {
     fn description(&self) -> &str {
         &self.fault_string
     }
@@ -251,7 +250,7 @@ impl Error for Fault {
 mod tests {
     use super::*;
 
-    use std::error::Error;
+    use std::error;
 
     #[test]
     fn fault_roundtrip() {
@@ -265,8 +264,8 @@ mod tests {
 
     #[test]
     fn error_impls_error() {
-        fn assert_error<T: Error>() {}
+        fn assert_error<T: error::Error>() {}
 
-        assert_error::<RequestError>();
+        assert_error::<Error>();
     }
 }
