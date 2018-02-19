@@ -42,7 +42,7 @@ pub trait Transport {
 ///
 /// This module will be disabled if the `reqwest` feature is not enabled.
 ///
-/// The default [`Transport`][transport] implementation for `RequestBuilder` looks roughly like
+/// The default [`Transport`] implementation for `RequestBuilder` looks roughly like
 /// this:
 ///
 /// ```notrust
@@ -57,7 +57,7 @@ pub trait Transport {
 ///
 /// From this, you can build your own custom transports.
 ///
-/// [transport]: ../trait.Transport.html
+/// [`Transport`]: ../trait.Transport.html
 #[cfg(feature = "reqwest")]
 pub mod http {
     extern crate reqwest;
@@ -88,9 +88,14 @@ pub mod http {
     }
 
     /// Checks that a reqwest `Response` has a status code indicating success and contains all
-    /// headers mandated by the spec.
+    /// required headers.
     ///
-    /// This is done by default to ensure compliance.
+    /// In particular, the following headers must be present:
+    ///
+    /// ```notrust
+    /// Content-Type: text/xml
+    /// Content-Length: <body length>
+    /// ```
     pub fn check_response(response: &reqwest::Response) -> Result<(), Box<Error>> {
         // This is essentially an open-coded version of `Response::error_for_status` that does not
         // consume the response.
