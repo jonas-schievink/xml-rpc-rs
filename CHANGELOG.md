@@ -8,6 +8,7 @@
 * Stricter checking of server headers
 * Removed the nested `Result` you get when performing a call
 * Restructure the `RequestError` type to better hide details the user shouldn't need to see
+* Removed the `RequestResult` type alias in favor of explicitly naming the result type
 
 ### New Features
 
