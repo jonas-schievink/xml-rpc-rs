@@ -87,6 +87,10 @@ pub enum Value {
 
 impl Value {
     /// Formats this `Value` as an XML `<value>` element.
+    ///
+    /// # Errors
+    ///
+    /// Any error reported by the writer will be propagated to the caller.
     pub fn write_as_xml<W: Write>(&self, fmt: &mut W) -> io::Result<()> {
         writeln!(fmt, "<value>")?;
 

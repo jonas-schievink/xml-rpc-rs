@@ -18,7 +18,7 @@ use std::collections::BTreeMap;
 pub struct Error(RequestErrorKind);
 
 impl Error {
-    /// If this `RequestError` was caused by the server responding with a `<fault>` response,
+    /// If this `Error` was caused by the server responding with a `<fault>` response,
     /// returns the `Fault` in question.
     pub fn fault(&self) -> Option<&Fault> {
         match self.0 {

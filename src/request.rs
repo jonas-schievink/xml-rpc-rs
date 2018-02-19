@@ -36,11 +36,13 @@ impl<'a> Request<'a> {
 
     /// Performs the request using a [`Transport`].
     ///
-    /// Returns a [`RequestResult`] indicating whether the request was sent and processed
-    /// successfully (according to the rules of XML-RPC).
+    /// # Errors
+    ///
+    /// Any error that occurs while sending the request using the [`Transport`] will be returned to
+    /// the caller. Additionally, if the response is malformed (invalid XML), or indicates that the
+    /// method call failed, an error will also be returned.
     ///
     /// [`Transport`]: trait.Transport.html
-    /// [`RequestResult`]: type.RequestResult.html
     pub fn call<T: Transport>(&self, transport: T) -> Result<Value, Error> {
         let mut reader = transport.transmit(self)
             .map_err(RequestErrorKind::TransportError)?;
@@ -58,12 +60,27 @@ impl<'a> Request<'a> {
     /// don't need to depend on `reqwest` yourself.
     ///
     /// This method is only available when the `reqwest` feature is enabled (this is the default).
+    ///
+    /// # Errors
+    ///
+    /// Since this is just a convenience wrapper around [`Request::call`], this returns an error in
+    /// the same cases as that method.
+    ///
+    /// If the HTTP request can not be sent, the reqwest [`Transport`] will return an error that
+    /// will be passed to the caller of this method.
+    ///
+    /// [`Request::call`]: #method.call
+    /// [`Transport`]: trait.Transport.html
     #[cfg(feature = "reqwest")]
     pub fn call_url(&self, url: &str) -> Result<Value, Error> {
         self.call(reqwest::Client::new().post(url))
     }
 
     /// Formats this `Request` as XML.
+    ///
+    /// # Errors
+    ///
+    /// Any error reported by the writer will be propagated to the caller.
     pub fn write_as_xml<W: Write>(&self, fmt: &mut W) -> io::Result<()> {
         write!(fmt, r#"<?xml version="1.0" encoding="utf-8"?>"#)?;
         write!(fmt, r#"<methodCall>"#)?;

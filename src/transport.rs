@@ -29,10 +29,12 @@ pub trait Transport {
     /// library will read all of the data and parse it as a response. It must be UTF-8 encoded XML,
     /// otherwise the call will fail.
     ///
-    /// If a transport error occurs, this should return it as a boxed error - the library will
-    /// interpret it as a transport error and return an appropriate [`RequestError`].
+    /// # Errors
     ///
-    /// [`RequestError`]: struct.RequestError.html
+    /// If a transport error occurs, it should be returned as a boxed error - the library will then
+    /// return an appropriate [`Error`].
+    ///
+    /// [`Error`]: struct.Error.html
     fn transmit(self, request: &Request) -> Result<Self::Stream, Box<Error>>;
 }
 
