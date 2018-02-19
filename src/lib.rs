@@ -2,8 +2,9 @@
 //!
 //! The `xmlrpc` crate provides a minimal implementation of the [XML-RPC spec][spec].
 //!
-//!
 //! [spec]: http://xmlrpc.scripting.com/spec.html
+
+#![doc(html_root_url = "https://docs.rs/xmlrpc/0.9.0")]
 
 extern crate base64;
 extern crate iso8601;
