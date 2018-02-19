@@ -5,6 +5,7 @@ documentation = "https://docs.rs/xmlrpc/"
 repository = "https://github.com/jonas-schievink/xml-rpc-rs.git"
 keywords = ["xml", "rpc", "remote", "ipc"]
 categories = ["network-programming", "encoding"]
+readme = "README.md"
 license = "CC0-1.0"
 name = "xmlrpc"
 version = "0.9.0"
