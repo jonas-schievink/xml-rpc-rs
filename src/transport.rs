@@ -32,7 +32,7 @@ pub trait Transport {
     /// # Errors
     ///
     /// If a transport error occurs, it should be returned as a boxed error - the library will then
-    /// return an appropriate [`Error`].
+    /// return an appropriate [`Error`] to the caller.
     ///
     /// [`Error`]: struct.Error.html
     fn transmit(self, request: &Request) -> Result<Self::Stream, Box<Error>>;
