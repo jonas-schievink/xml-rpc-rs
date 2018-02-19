@@ -6,7 +6,6 @@
 
 * Replace ad-hoc API with a `Transport` trait that can be implemented to change the way the request is sent
 * Stricter checking of server headers
-* Removed `From<Vec<u8>>` impl of `Value`
 * Removed the nested `Result` you get when performing a call
 * Restructure the `RequestError` type to better hide details the user shouldn't need to see
 
