@@ -41,7 +41,7 @@ impl<'a> Request<'a> {
     ///
     /// [`Transport`]: trait.Transport.html
     /// [`RequestResult`]: type.RequestResult.html
-    pub fn call<T: Transport>(&self, transport: T) -> RequestResult {
+    pub fn call<T: Transport>(&self, transport: T) -> Result<Value, RequestError> {
         let mut reader = transport.transmit(self)
             .map_err(RequestErrorKind::TransportError)?;
 
@@ -59,7 +59,7 @@ impl<'a> Request<'a> {
     ///
     /// This method is only available when the `reqwest` feature is enabled (this is the default).
     #[cfg(feature = "reqwest")]
-    pub fn call_url(&self, url: &str) -> RequestResult {
+    pub fn call_url(&self, url: &str) -> Result<Value, RequestError> {
         self.call(reqwest::Client::new().post(url))
     }
 
@@ -94,9 +94,6 @@ impl<'a> Request<'a> {
         Value::Struct(multicall_struct)
     }
 }
-
-/// The result of executing a request.
-pub type RequestResult = Result<Value, RequestError>;
 
 #[cfg(test)]
 mod tests {
