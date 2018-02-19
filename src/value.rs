@@ -286,8 +286,21 @@ impl From<Vec<u8>> for Value {
     }
 }
 
-/// A type that can be used to index into a `Value`.
-pub trait Index {
+mod sealed {
+    /// A trait that is only nameable (and thus implementable) inside this crate.
+    pub trait Sealed {}
+    impl<T: ? Sized> Sealed for T {}
+}
+
+/// A type that can be used to index into a [`Value`].
+///
+/// You can use Rust's regular indexing syntax to access components of [`Value`]s. Refer to the
+/// examples on [`Value`] for details.
+///
+/// This trait can not be implemented by custom types.
+///
+/// [`Value`]: enum.Value.html
+pub trait Index: sealed::Sealed {
     /// Gets an inner value of a given value represented by self.
     #[doc(hidden)]
     fn get<'v>(&self, value: &'v Value) -> Option<&'v Value>;
