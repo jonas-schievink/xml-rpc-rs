@@ -289,7 +289,10 @@ impl From<Vec<u8>> for Value {
 mod sealed {
     /// A trait that is only nameable (and thus implementable) inside this crate.
     pub trait Sealed {}
-    impl<T: ? Sized> Sealed for T {}
+    impl Sealed for str {}
+    impl Sealed for String {}
+    impl Sealed for usize {}
+    impl<'a, I> Sealed for &'a I where I: Sealed + ?Sized {}
 }
 
 /// A type that can be used to index into a [`Value`].
