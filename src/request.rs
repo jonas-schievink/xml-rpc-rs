@@ -38,7 +38,7 @@ impl<'a> Request<'a> {
     ///
     /// # Errors
     ///
-    /// Any error that occurs while sending the request using the [`Transport`] will be returned to
+    /// Any errors that occur while sending the request using the [`Transport`] will be returned to
     /// the caller. Additionally, if the response is malformed (invalid XML), or indicates that the
     /// method call failed, an error will also be returned.
     ///
@@ -63,24 +63,27 @@ impl<'a> Request<'a> {
     ///
     /// # Errors
     ///
-    /// Since this is just a convenience wrapper around [`Request::call`], this returns an error in
-    /// the same cases as that method.
+    /// Since this is just a convenience wrapper around [`Request::call`], the same error conditions
+    /// apply.
     ///
-    /// If the HTTP request can not be sent, the reqwest [`Transport`] will return an error that
-    /// will be passed to the caller of this method.
+    /// Any reqwest errors will be propagated to the caller.
     ///
     /// [`Request::call`]: #method.call
     /// [`Transport`]: trait.Transport.html
     #[cfg(feature = "reqwest")]
     pub fn call_url(&self, url: &str) -> Result<Value, Error> {
+        // While we could implement `Transport` for `&str`, such an impl might not be completely
+        // obvious, so I've added this method instead. Might want to reconsider if someone has an
+        // objection.
         self.call(reqwest::Client::new().post(url))
     }
 
-    /// Formats this `Request` as XML.
+    /// Formats this `Request` as a UTF-8 encoded XML document.
     ///
     /// # Errors
     ///
-    /// Any error reported by the writer will be propagated to the caller.
+    /// Any errors reported by the writer will be propagated to the caller. If the writer never
+    /// returns an error, neither will this method.
     pub fn write_as_xml<W: Write>(&self, fmt: &mut W) -> io::Result<()> {
         write!(fmt, r#"<?xml version="1.0" encoding="utf-8"?>"#)?;
         write!(fmt, r#"<methodCall>"#)?;
