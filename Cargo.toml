@@ -8,7 +8,7 @@ categories = ["network-programming", "encoding"]
 readme = "README.md"
 license = "CC0-1.0"
 name = "xmlrpc"
-version = "0.9.0"  # remember to update html_root_url
+version = "0.10.0"  # remember to update html_root_url
 
 [dependencies]
 base64 = "0.9.0"

@@ -14,7 +14,7 @@ Start by adding an entry to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-xmlrpc = "0.9.0"
+xmlrpc = "0.10.0"
 ```
 
 Then import the crate into your Rust code:
