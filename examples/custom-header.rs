@@ -19,7 +19,7 @@ impl Transport for MyTransport {
 
     fn transmit(mut self, request: &Request) -> Result<Self::Stream, Box<Error>> {
         let mut body = Vec::new();
-        request.write_as_xml(&mut body).unwrap();
+        request.write_as_xml(&mut body).expect("could not write request to buffer (this should never happen)");
 
         build_headers(&mut self.0, body.len() as u64);
 
