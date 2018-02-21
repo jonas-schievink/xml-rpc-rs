@@ -55,6 +55,8 @@ impl<'a> Request<'a> {
 
     /// Performs the request on a URL.
     ///
+    /// You can pass a `&str` or an already parsed reqwest URL.
+    ///
     /// This is a convenience method that will internally create a new `reqwest::Client` and send an
     /// HTTP POST request to the given URL. If you only use this method to perform requests, you
     /// don't need to depend on `reqwest` yourself.
@@ -71,10 +73,10 @@ impl<'a> Request<'a> {
     /// [`Request::call`]: #method.call
     /// [`Transport`]: trait.Transport.html
     #[cfg(feature = "reqwest")]
-    pub fn call_url(&self, url: &str) -> Result<Value, Error> {
-        // While we could implement `Transport` for `&str`, such an impl might not be completely
-        // obvious, so I've added this method instead. Might want to reconsider if someone has an
-        // objection.
+    pub fn call_url<U: reqwest::IntoUrl>(&self, url: U) -> Result<Value, Error> {
+        // While we could implement `Transport` for `T: IntoUrl`, such an impl might not be
+        // completely obvious (as it applies to `&str), so I've added this method instead.
+        // Might want to reconsider if someone has an objection.
         self.call(reqwest::Client::new().post(url))
     }
 
