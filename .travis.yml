@@ -9,7 +9,11 @@ env:
   global:
     - RUSTFLAGS="--deny warnings"
     - RUST_BACKTRACE=1
+    - CARGO_INCREMENTAL=0  # decrease size of `target` to make the cache smaller
   matrix:
     - FEATURES=""  # default configuration (with reqwest)
     - FEATURES="--no-default-features"
-script: cargo test $FEATURES
+script:
+  - cargo test $FEATURES
+  - du -hs ~/.cargo
+  - du -hs *
