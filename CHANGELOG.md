@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.10.0
+## Unreleased
+
+No changes.
+
+## 0.10.0 - 2018-02-21
 
 ### Breaking changes
 
