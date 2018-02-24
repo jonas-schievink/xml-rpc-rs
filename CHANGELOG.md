@@ -2,11 +2,13 @@
 
 ## Unreleased
 
-No changes.
+### Breaking Changes
+
+* The error returned by `Transport::transmit` must now be `Send + Sync`; this allows our own `Error` type to be `Send + Sync`, which makes it more useful for downstream crates (see: [API guidelines][c-good-err]) ([#39](https://github.com/jonas-schievink/xml-rpc-rs/pull/39))
 
 ## 0.10.0 - 2018-02-21
 
-### Breaking changes
+### Breaking Changes
 
 * Replace ad-hoc API with a `Transport` trait that can be implemented to change the way the request is sent
 * Stricter checking of server headers
@@ -28,3 +30,5 @@ No changes.
 ## <= 0.9.0
 
 * The API slowly grew to expose more internals in order to accommodate more use cases
+
+[c-good-err]: https://rust-lang-nursery.github.io/api-guidelines/interoperability.html#c-good-err
