@@ -17,7 +17,7 @@ struct MyTransport(RequestBuilder);
 impl Transport for MyTransport {
     type Stream = reqwest::Response;
 
-    fn transmit(mut self, request: &Request) -> Result<Self::Stream, Box<Error>> {
+    fn transmit(mut self, request: &Request) -> Result<Self::Stream, Box<Error + Send + Sync>> {
         let mut body = Vec::new();
         request.write_as_xml(&mut body).expect("could not write request to buffer (this should never happen)");
 

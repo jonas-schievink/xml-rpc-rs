@@ -17,9 +17,6 @@ use std::collections::BTreeMap;
 #[derive(Debug)]
 pub struct Error(RequestErrorKind);
 
-// FIXME: Error isn't currently Send/Sync because transport errors might not be. This will solve
-// itself when we move to `failure`.
-
 impl Error {
     /// If this `Error` was caused by the server responding with a `<fault>` response,
     /// returns the `Fault` in question.
@@ -61,7 +58,7 @@ pub enum RequestErrorKind {
     ParseError(ParseError),
 
     /// A communication error originating from the transport used to perform the request.
-    TransportError(Box<error::Error + 'static>),
+    TransportError(Box<error::Error + Send + Sync>),
 
     /// The server returned a `<fault>` response, indicating that the execution of the call
     /// encountered a problem (for example, an invalid (number of) arguments was passed).
@@ -270,5 +267,12 @@ mod tests {
         fn assert_error<T: error::Error>() {}
 
         assert_error::<Error>();
+    }
+
+    #[test]
+    fn error_is_send_sync() {
+        fn assert_send_sync<T: Send + Sync>() {}
+
+        assert_send_sync::<Error>();
     }
 }
