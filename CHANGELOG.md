@@ -4,7 +4,7 @@
 
 ### Breaking Changes
 
-* The error returned by `Transport::transmit` must now be `Send + Sync`; this allows our own `Error` type to be `Send + Sync`, which makes it more useful for downstream crates (see: [API guidelines][c-good-err]) ([#39](https://github.com/jonas-schievink/xml-rpc-rs/pull/39))
+* `Transport` errors must now be `Send + Sync`; this allows our own `Error` type to be `Send + Sync`, which makes it more useful for downstream crates (see: [API guidelines][c-good-err]) ([#39](https://github.com/jonas-schievink/xml-rpc-rs/pull/39))
 
 ## 0.10.0 - 2018-02-21
 
