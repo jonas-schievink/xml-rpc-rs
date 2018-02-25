@@ -34,6 +34,7 @@ required-features = ["reqwest"]
 [package.metadata.release]
 tag-message = "{{version}}"
 no-dev-version = true
+pre-release-commit-message = "Release {{version}}"
 
 # Change the changelog's `Unreleased` section to refer to this release and prepend new `Unreleased` section
 [[package.metadata.release.pre-release-replacements]]
