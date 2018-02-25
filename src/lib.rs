@@ -4,7 +4,7 @@
 //!
 //! [XML-RPC specification]: http://xmlrpc.scripting.com/spec.html
 
-#![doc(html_root_url = "https://docs.rs/xmlrpc/0.10.0")]
+#![doc(html_root_url = "https://docs.rs/xmlrpc/0.11.0")]
 #![warn(missing_debug_implementations)]
 
 extern crate base64;

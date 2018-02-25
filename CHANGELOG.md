@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+No changes.
+
+## 0.11.0 - 2018-02-25
+
 ### Breaking Changes
 
 * `Transport` errors must now be `Send + Sync`; this allows our own `Error` type to be `Send + Sync`, which makes it more useful for downstream crates (see: [API guidelines][c-good-err]) ([#39](https://github.com/jonas-schievink/xml-rpc-rs/pull/39))
