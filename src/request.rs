@@ -36,12 +36,16 @@ impl<'a> Request<'a> {
 
     /// Performs the request using a [`Transport`].
     ///
+    /// If you want to send the request using an HTTP POST request, you can also use [`call_url`],
+    /// which creates a suitable [`Transport`] internally.
+    ///
     /// # Errors
     ///
     /// Any errors that occur while sending the request using the [`Transport`] will be returned to
     /// the caller. Additionally, if the response is malformed (invalid XML), or indicates that the
     /// method call failed, an error will also be returned.
     ///
+    /// [`call_url`]: #method.call_url
     /// [`Transport`]: trait.Transport.html
     pub fn call<T: Transport>(&self, transport: T) -> Result<Value, Error> {
         let mut reader = transport.transmit(self)
