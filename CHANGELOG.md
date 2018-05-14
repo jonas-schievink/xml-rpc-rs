@@ -6,7 +6,9 @@ No changes.
 
 ## 0.11.1 - 2018-05-14
 
-No changes.
+### Bugfixes
+
+* Stop checking `Content-Length` headers to support compressed responses ([#41](https://github.com/jonas-schievink/xml-rpc-rs/pull/41))
 
 ## 0.11.0 - 2018-02-25
 
