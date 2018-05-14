@@ -89,15 +89,8 @@ pub mod http {
             .header(ContentLength(body_len));
     }
 
-    /// Checks that a reqwest `Response` has a status code indicating success and contains all
-    /// required headers.
-    ///
-    /// In particular, the following headers must be present:
-    ///
-    /// ```notrust
-    /// Content-Type: text/xml
-    /// Content-Length: <body length>
-    /// ```
+    /// Checks that a reqwest `Response` has a status code indicating success and verifies certain
+    /// headers.
     pub fn check_response(response: &reqwest::Response) -> Result<(), Box<Error + Send + Sync>> {
         // This is essentially an open-coded version of `Response::error_for_status` that does not
         // consume the response.
@@ -116,9 +109,6 @@ pub mod http {
                 ),
             }
         }
-
-        response.headers().get::<ContentLength>()
-            .ok_or_else(|| Box::<Error + Send + Sync>::from(format!("expected Content-Length header, but none was found")))?;
 
         Ok(())
     }
