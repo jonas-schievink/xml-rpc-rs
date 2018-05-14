@@ -110,6 +110,9 @@ pub mod http {
             }
         }
 
+        // We ignore the Content-Length header because it doesn't matter for the parser and reqwest
+        // will remove it when the response is gzip compressed.
+
         Ok(())
     }
 
