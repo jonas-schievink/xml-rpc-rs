@@ -4,6 +4,10 @@
 
 No changes.
 
+## 0.11.1 - 2018-05-14
+
+No changes.
+
 ## 0.11.0 - 2018-02-25
 
 ### Breaking Changes
