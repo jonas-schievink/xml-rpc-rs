@@ -23,4 +23,4 @@ Then import the crate into your Rust code:
 extern crate xmlrpc;
 ```
 
-See [`examples/client.rs`](examples/client.rs) for a small example which connects to a running Python XML-RPC server and calls a method.
+See [`examples/client.rs`](examples/client.rs) for a small example which connects to a running Python XML-RPC server and calls a method. A more elaborate example that demonstrates how to implement a custom `Transport` to set a cookie header is provided in [`examples/custom-header.rs`](examples/custom-header.rs).
