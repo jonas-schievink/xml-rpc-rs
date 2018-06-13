@@ -19,8 +19,7 @@ use std::io::{self, Write};
 /// # Examples
 ///
 /// ```
-/// # use std::collections::BTreeMap;
-/// # use xmlrpc::{Value, Index};
+/// # use xmlrpc::{Value};
 /// let nothing = Value::Nil;
 ///
 /// let person = Value::Struct(vec![
