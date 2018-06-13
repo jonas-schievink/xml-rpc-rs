@@ -188,7 +188,9 @@ impl error::Error for ParseError {
 /// `<fault>` case, further describing the error.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Fault {
+    /// An application-specific error code.
     pub fault_code: i32,
+    /// Human-readable error description.
     pub fault_string: String,
 }
 
