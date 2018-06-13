@@ -6,6 +6,7 @@
 
 #![doc(html_root_url = "https://docs.rs/xmlrpc/0.11.1")]
 #![warn(missing_debug_implementations)]
+#![warn(missing_docs)]
 
 extern crate base64;
 extern crate iso8601;
