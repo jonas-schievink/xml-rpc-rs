@@ -19,7 +19,6 @@ impl Transport for MyTransport {
 
     fn transmit(mut self, request: &Request) -> Result<Self::Stream, Box<Error + Send + Sync>> {
         let mut body = Vec::new();
-        // writing to a `Vec<u8>` cannot fail, so we can unwrap here
         request.write_as_xml(&mut body).expect("could not write request to buffer (this should never happen)");
 
         build_headers(&mut self.0, body.len() as u64);
@@ -39,13 +38,11 @@ impl Transport for MyTransport {
     }
 }
 
-fn main() -> Result<(), xmlrpc::Error> {
+fn main() {
     let request = Request::new("pow").arg(2).arg(8);
 
     let tp = MyTransport(Client::new().post("http://localhost/target"));
-    let result = request.call(tp)?;
+    let result = request.call(tp);
 
-    println!("result: {:?}", result);
-
-    Ok(())
+    println!("Result: {:?}", result);
 }

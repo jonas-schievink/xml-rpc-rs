@@ -3,17 +3,16 @@
 
 extern crate xmlrpc;
 
-use xmlrpc::{Request, Value, Error};
+use xmlrpc::{Request, Value};
 
-fn main() -> Result<(), Error> {
+fn main() {
     // The Python example server exports Python's `pow` method. Let's call it!
     let pow_request = Request::new("pow").arg(2).arg(8);    // Compute 2**8
 
-    let response = pow_request.call_url("http://127.0.0.1:8000")?;
+    let request_result = pow_request.call_url("http://127.0.0.1:8000");
 
-    println!("server response {:?}", response);
+    println!("Result: {:?}", request_result);
 
-    assert_eq!(response, Value::Int(2i32.pow(8)));
-
-    Ok(())
+    let pow_result = request_result.unwrap();
+    assert_eq!(pow_result, Value::Int(2i32.pow(8)));
 }
