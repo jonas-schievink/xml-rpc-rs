@@ -1,4 +1,8 @@
 //! Defines error types used by this library.
+//!
+//! The main error type returned by most functions is [`Error`].
+//!
+//! [`Error`]: struct.Error.html
 
 use Value;
 
@@ -15,22 +19,35 @@ use std::collections::BTreeMap;
 /// server (maybe it's not implementing XML-RPC correctly), or just a failure to execute the
 /// operation.
 #[derive(Debug)]
-pub struct Error(RequestErrorKind);
+pub struct Error(ErrorKind);
 
 impl Error {
     /// If this `Error` was caused by the server responding with a `<fault>` response,
-    /// returns the `Fault` in question.
+    /// returns the [`Fault`] in question.
+    ///
+    /// [`Fault`]: struct.Fault.html
     pub fn fault(&self) -> Option<&Fault> {
         match self.0 {
-            RequestErrorKind::Fault(ref fault) => Some(fault),
+            ErrorKind::Fault(ref fault) => Some(fault),
+            _ => None,
+        }
+    }
+
+    /// If this `Error` was caused by a failure to parse a request or response, returns the
+    /// corresponding [`ParseError`].
+    ///
+    /// [`ParseError`]: struct.ParseError.html
+    pub fn parse_error(&self) -> Option<&ParseError> {
+        match self.0 {
+            ErrorKind::ParseError(ref e) => Some(e),
             _ => None,
         }
     }
 }
 
-#[doc(hidden)]  // hide internal impl
-impl From<RequestErrorKind> for Error {
-    fn from(kind: RequestErrorKind) -> Self {
+#[doc(hidden)]  // hide internal impl (it's not usable from outside anyways)
+impl From<ErrorKind> for Error {
+    fn from(kind: ErrorKind) -> Self {
         Error(kind)
     }
 }
@@ -52,7 +69,7 @@ impl error::Error for Error {
 }
 
 #[derive(Debug)]
-pub enum RequestErrorKind {
+pub(crate) enum ErrorKind {
     /// The response could not be parsed. This can happen when the server doesn't correctly
     /// implement the XML-RPC spec.
     ParseError(ParseError),
@@ -65,49 +82,73 @@ pub enum RequestErrorKind {
     Fault(Fault),
 }
 
-impl From<ParseError> for RequestErrorKind {
-    fn from(e: ParseError) -> Self {
-        RequestErrorKind::ParseError(e)
+impl From<ParseErrorKind> for ErrorKind {
+    fn from(e: ParseErrorKind) -> Self {
+        ErrorKind::ParseError(ParseError::new(e))
     }
 }
 
-impl From<Fault> for RequestErrorKind {
+impl From<Fault> for ErrorKind {
     fn from(f: Fault) -> Self {
-        RequestErrorKind::Fault(f)
+        ErrorKind::Fault(f)
     }
 }
 
-impl Display for RequestErrorKind {
+impl Display for ErrorKind {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         match *self {
-            RequestErrorKind::ParseError(ref err) => write!(fmt, "parse error: {}", err),
-            RequestErrorKind::TransportError(ref err) => write!(fmt, "transport error: {}", err),
-            RequestErrorKind::Fault(ref err) => write!(fmt, "{}", err),
+            ErrorKind::ParseError(ref err) => write!(fmt, "parse error: {}", err),
+            ErrorKind::TransportError(ref err) => write!(fmt, "transport error: {}", err),
+            ErrorKind::Fault(ref err) => write!(fmt, "{}", err),
         }
     }
 }
 
-impl error::Error for RequestErrorKind {
+impl error::Error for ErrorKind {
     fn description(&self) -> &str {
         match *self {
-            RequestErrorKind::ParseError(_) => "parse error",
-            RequestErrorKind::TransportError(_) => "transport error",
-            RequestErrorKind::Fault(_) => "server returned a fault",
+            ErrorKind::ParseError(_) => "parse error",
+            ErrorKind::TransportError(_) => "transport error",
+            ErrorKind::Fault(_) => "server returned a fault",
         }
     }
 
     fn cause(&self) -> Option<&error::Error> {
         match *self {
-            RequestErrorKind::ParseError(ref err) => Some(err),
-            RequestErrorKind::TransportError(ref err) => Some(err.as_ref()),
-            RequestErrorKind::Fault(ref err) => Some(err),
+            ErrorKind::ParseError(ref err) => Some(err),
+            ErrorKind::TransportError(ref err) => Some(err.as_ref()),
+            ErrorKind::Fault(ref err) => Some(err),
         }
+    }
+}
+
+/// An error that occurred while parsing an XML-RPC request or response.
+#[derive(Debug)]
+pub struct ParseError {
+    kind: ParseErrorKind,
+}
+
+impl ParseError {
+    fn new(kind: ParseErrorKind) -> Self {
+        Self { kind }
+    }
+}
+
+impl Display for ParseError {
+    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        self.kind.fmt(fmt)
+    }
+}
+
+impl error::Error for ParseError {
+    fn description(&self) -> &str {
+        self.kind.description()
     }
 }
 
 /// Describes possible error that can occur when parsing a `Response`.
 #[derive(Debug, PartialEq)]
-pub enum ParseError {
+pub(crate) enum ParseErrorKind {
     /// Error while parsing (malformed?) XML.
     XmlError(XmlError),
 
@@ -133,35 +174,35 @@ pub enum ParseError {
     }
 }
 
-impl From<XmlError> for ParseError {
+impl From<XmlError> for ParseErrorKind {
     fn from(e: XmlError) -> Self {
-        ParseError::XmlError(e)
+        ParseErrorKind::XmlError(e)
     }
 }
 
-impl From<io::Error> for ParseError {
+impl From<io::Error> for ParseErrorKind {
     fn from(e: io::Error) -> Self {
-        ParseError::XmlError(XmlError::from(e))
+        ParseErrorKind::XmlError(XmlError::from(e))
     }
 }
 
-impl Display for ParseError {
+impl Display for ParseErrorKind {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         match *self {
-            ParseError::XmlError(ref err) => write!(fmt, "malformed XML: {}", err),
-            ParseError::InvalidValue {
+            ParseErrorKind::XmlError(ref err) => write!(fmt, "malformed XML: {}", err),
+            ParseErrorKind::InvalidValue {
                 for_type,
                 ref found,
                 ref position,
             } => write!(fmt, "invalid value for type '{}' at {}: {}", for_type, position, found),
-            ParseError::UnexpectedXml {
+            ParseErrorKind::UnexpectedXml {
                 ref expected,
                 ref position,
                 found: None,
             } => {
                 write!(fmt, "unexpected XML at {} (expected {})", position, expected)
             }
-            ParseError::UnexpectedXml {
+            ParseErrorKind::UnexpectedXml {
                 ref expected,
                 ref position,
                 found: Some(ref found),
@@ -172,12 +213,12 @@ impl Display for ParseError {
     }
 }
 
-impl error::Error for ParseError {
+impl error::Error for ParseErrorKind {
     fn description(&self) -> &str {
         match *self {
-            ParseError::XmlError(ref err) => err.description(),
-            ParseError::InvalidValue { .. } => "invalid value for type",
-            ParseError::UnexpectedXml { .. } => "unexpected XML content",
+            ParseErrorKind::XmlError(ref err) => err.description(),
+            ParseErrorKind::InvalidValue { .. } => "invalid value for type",
+            ParseErrorKind::UnexpectedXml { .. } => "unexpected XML content",
         }
     }
 }
@@ -193,6 +234,8 @@ pub struct Fault {
     /// Human-readable error description.
     pub fault_string: String,
 }
+
+// TODO (breaking): make Fault fields private and provide getters and ctor
 
 impl Fault {
     /// Creates a `Fault` from a `Value`.

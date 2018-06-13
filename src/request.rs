@@ -2,7 +2,7 @@
 extern crate reqwest;
 
 use Value;
-use error::{Error, RequestErrorKind};
+use error::{Error, ErrorKind};
 use utils::escape_xml;
 use transport::Transport;
 use parser::parse_response;
@@ -49,11 +49,11 @@ impl<'a> Request<'a> {
     /// [`Transport`]: trait.Transport.html
     pub fn call<T: Transport>(&self, transport: T) -> Result<Value, Error> {
         let mut reader = transport.transmit(self)
-            .map_err(RequestErrorKind::TransportError)?;
+            .map_err(ErrorKind::TransportError)?;
 
-        let response = parse_response(&mut reader).map_err(RequestErrorKind::ParseError)?;
+        let response = parse_response(&mut reader).map_err(|e| ErrorKind::from(e))?;
 
-        let value = response.map_err(RequestErrorKind::Fault)?;
+        let value = response.map_err(ErrorKind::Fault)?;
         Ok(value)
     }
 

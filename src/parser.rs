@@ -1,7 +1,7 @@
 //! XML-RPC response parser.
 
 use {Value, Fault};
-use error::ParseError;
+use error::ParseErrorKind;
 
 use base64;
 use xml::reader::{XmlEvent, EventReader};
@@ -17,7 +17,7 @@ use std::collections::BTreeMap;
 /// XML-RPC specifies that a call should either return a single `Value`, or a `<fault>`.
 pub type Response = Result<Value, Fault>;
 
-type ParseResult<T> = Result<T, ParseError>;
+type ParseResult<T> = Result<T, ParseErrorKind>;
 
 pub struct Parser<'a, R: Read + 'a> {
     reader: EventReader<&'a mut R>,
@@ -27,7 +27,7 @@ pub struct Parser<'a, R: Read + 'a> {
 }
 
 impl<'a, R: Read> Parser<'a, R> {
-    pub fn new(reader: &'a mut R) -> ParseResult<Self> {
+    pub(crate) fn new(reader: &'a mut R) -> ParseResult<Self> {
         let reader = EventReader::new_with_config(reader, ParserConfig {
             cdata_to_characters: true,
             ..Default::default()
@@ -103,7 +103,7 @@ impl<'a, R: Read> Parser<'a, R> {
         let expected = expected.to_string();
         let position = self.reader.position();
 
-        Err(ParseError::UnexpectedXml {
+        Err(ParseErrorKind::UnexpectedXml {
             expected,
             position,
             found: match self.cur {
@@ -117,9 +117,9 @@ impl<'a, R: Read> Parser<'a, R> {
         })
     }
 
-    fn invalid_value(&self, for_type: &'static str, value: String) -> ParseError {
+    fn invalid_value(&self, for_type: &'static str, value: String) -> ParseErrorKind {
         // FIXME: It might be neat to preserve the original error as the cause
-        ParseError::InvalidValue {
+        ParseErrorKind::InvalidValue {
             for_type,
             found: value,
             position: self.reader.position(),
@@ -330,7 +330,7 @@ impl<'a, R: Read> Parser<'a, R> {
 }
 
 /// Parses a response from an XML reader.
-pub fn parse_response<R: Read>(reader: &mut R) -> ParseResult<Response> {
+pub(crate) fn parse_response<R: Read>(reader: &mut R) -> ParseResult<Response> {
     Parser::new(reader)?.parse_response()
 }
 

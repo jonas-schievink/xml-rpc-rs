@@ -12,13 +12,14 @@ extern crate base64;
 extern crate iso8601;
 extern crate xml;
 
-mod error;
+pub mod error;
 mod parser;
 mod request;
 mod value;
 mod utils;
 mod transport;
 
+// TODO (breaking): Remove `Fault` reexport as it's rarely needed and is in `error`, too
 pub use error::{Error, Fault};
 pub use request::Request;
 pub use value::{Value, Index};
