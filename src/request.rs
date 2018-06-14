@@ -7,7 +7,6 @@ use utils::escape_xml;
 use transport::Transport;
 use parser::parse_response;
 
-use serde::Serialize;
 use std::io::{self, Write};
 use std::collections::BTreeMap;
 
@@ -36,7 +35,8 @@ impl<'a> Request<'a> {
     }
 
     /// Appends a serializable value as an argument.
-    pub fn arg_serializable<T: Serialize>(mut self, value: T) -> Result<Self, Error> {
+    #[cfg(feature = "serde")]
+    pub fn arg_serializable<T: ::serde::Serialize>(mut self, value: T) -> Result<Self, Error> {
         let value = value.serialize(&mut ::ser::Serializer::with_extensions())?;
         self.args.push(value);
         Ok(self)
@@ -133,7 +133,6 @@ impl<'a> Request<'a> {
 mod tests {
     use super::*;
     use std::str;
-    use std::{i64, f32};
 
     #[test]
     fn escapes_method_names() {
@@ -148,7 +147,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "serde")]
     fn serialization() {
+        use std::{i64, f32};
+
         #[derive(Serialize)]
         enum MyEnum {
             StructVariant {
