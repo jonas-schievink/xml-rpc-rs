@@ -12,6 +12,15 @@ extern crate base64;
 extern crate iso8601;
 extern crate xml;
 
+#[cfg(feature = "serde")]
+#[allow(unused)]    // derive is only used by tests
+#[macro_use]
+extern crate serde;
+
+#[cfg(feature = "serde")]
+mod ser;
+#[cfg(feature = "serde")]
+mod de;
 pub mod error;
 mod parser;
 mod request;

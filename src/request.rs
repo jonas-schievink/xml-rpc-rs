@@ -7,6 +7,7 @@ use utils::escape_xml;
 use transport::Transport;
 use parser::parse_response;
 
+use serde::Serialize;
 use std::io::{self, Write};
 use std::collections::BTreeMap;
 
@@ -32,6 +33,13 @@ impl<'a> Request<'a> {
     pub fn arg<T: Into<Value>>(mut self, value: T) -> Self {
         self.args.push(value.into());
         self
+    }
+
+    /// Appends a serializable value as an argument.
+    pub fn arg_serializable<T: Serialize>(mut self, value: T) -> Result<Self, Error> {
+        let value = value.serialize(&mut ::ser::Serializer::with_extensions())?;
+        self.args.push(value);
+        Ok(self)
     }
 
     /// Performs the request using a [`Transport`].
@@ -125,6 +133,7 @@ impl<'a> Request<'a> {
 mod tests {
     use super::*;
     use std::str;
+    use std::{i64, f32};
 
     #[test]
     fn escapes_method_names() {
@@ -136,5 +145,47 @@ mod tests {
             str::from_utf8(&output)
             .unwrap()
             .contains("<methodName>x&lt;&amp;x</methodName>"));
+    }
+
+    #[test]
+    fn serialization() {
+        #[derive(Serialize)]
+        enum MyEnum {
+            StructVariant {
+                field: Option<()>,    // `Some(())` and `None` serialize the same, like in serde_json
+            },
+            TupleVariant(u8, i8),
+            UnitVariant,
+        }
+
+        #[derive(Serialize)]
+        struct MyStruct {
+            empty_string: String,
+            string: String,
+            bool_: bool,
+            opt_bool: Option<bool>,
+            result: Result<i64, [u8; 4]>,
+            large: i64,
+            float: f32,
+            myenum: [MyEnum; 3],
+        }
+
+        let mut output: Vec<u8> = Vec::new();
+        Request::new("a").arg_serializable(MyStruct {
+            empty_string: String::new(),
+            string: "blablabli\0blo".to_string(),
+            bool_: false,
+            opt_bool: None,
+            result: Err([0x99, 0xff, 0x00, 0x00]),
+            large: i64::MIN,
+            float: f32::EPSILON,
+            myenum: [
+                MyEnum::StructVariant { field: Some(()) },
+                MyEnum::TupleVariant(100, -128),
+                MyEnum::UnitVariant,
+            ],
+        }).unwrap().write_as_xml(&mut output).unwrap();
+
+        assert_eq!("<?xml version=\"1.0\" encoding=\"utf-8\"?><methodCall>    <methodName>a</methodName>    <params>        <param><value>\n<struct>\n<member>\n<name>bool_</name>\n<value>\n<boolean>0</boolean>\n</value>\n</member>\n<member>\n<name>empty_string</name>\n<value>\n<string></string>\n</value>\n</member>\n<member>\n<name>float</name>\n<value>\n<double>0.00000011920928955078125</double>\n</value>\n</member>\n<member>\n<name>large</name>\n<value>\n<i8>-9223372036854775808</i8>\n</value>\n</member>\n<member>\n<name>myenum</name>\n<value>\n<array>\n<data>\n<value>\n<struct>\n<member>\n<name>StructVariant</name>\n<value>\n<struct>\n<member>\n<name>field</name>\n<value>\n<nil/>\n</value>\n</member>\n</struct>\n</value>\n</member>\n</struct>\n</value>\n<value>\n<struct>\n<member>\n<name>TupleVariant</name>\n<value>\n<array>\n<data>\n<value>\n<i4>100</i4>\n</value>\n<value>\n<i4>-128</i4>\n</value>\n</data>\n</array>\n</value>\n</member>\n</struct>\n</value>\n<value>\n<string>UnitVariant</string>\n</value>\n</data>\n</array>\n</value>\n</member>\n<member>\n<name>opt_bool</name>\n<value>\n<nil/>\n</value>\n</member>\n<member>\n<name>result</name>\n<value>\n<struct>\n<member>\n<name>Err</name>\n<value>\n<array>\n<data>\n<value>\n<i4>153</i4>\n</value>\n<value>\n<i4>255</i4>\n</value>\n<value>\n<i4>0</i4>\n</value>\n<value>\n<i4>0</i4>\n</value>\n</data>\n</array>\n</value>\n</member>\n</struct>\n</value>\n</member>\n<member>\n<name>string</name>\n<value>\n<string>blablabli\u{0}blo</string>\n</value>\n</member>\n</struct>\n</value>\n        </param>    </params></methodCall>", str::from_utf8(&output).unwrap());
     }
 }

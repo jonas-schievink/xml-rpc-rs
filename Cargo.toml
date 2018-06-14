@@ -15,9 +15,11 @@ base64 = "0.9.0"
 iso8601 = "0.2.0"
 xml-rs = "0.7.0"
 reqwest = { version = "0.8.0", optional = true }
+serde = { version = "1.0.66", optional = true }
 
 [dev-dependencies]
 version-sync = "0.5"
+serde = { version = "1.0.66", features = ["derive"] }
 
 [features]
 default = ["reqwest"]

@@ -80,6 +80,10 @@ pub(crate) enum ErrorKind {
     /// The server returned a `<fault>` response, indicating that the execution of the call
     /// encountered a problem (for example, an invalid (number of) arguments was passed).
     Fault(Fault),
+
+    /// Error message.
+    #[allow(unused)]
+    String(String),
 }
 
 impl From<ParseErrorKind> for ErrorKind {
@@ -100,6 +104,7 @@ impl Display for ErrorKind {
             ErrorKind::ParseError(ref err) => write!(fmt, "parse error: {}", err),
             ErrorKind::TransportError(ref err) => write!(fmt, "transport error: {}", err),
             ErrorKind::Fault(ref err) => write!(fmt, "{}", err),
+            ErrorKind::String(ref err) => write!(fmt, "{}", err),
         }
     }
 }
@@ -110,6 +115,7 @@ impl error::Error for ErrorKind {
             ErrorKind::ParseError(_) => "parse error",
             ErrorKind::TransportError(_) => "transport error",
             ErrorKind::Fault(_) => "server returned a fault",
+            ErrorKind::String(ref s) => s,
         }
     }
 
@@ -118,6 +124,7 @@ impl error::Error for ErrorKind {
             ErrorKind::ParseError(ref err) => Some(err),
             ErrorKind::TransportError(ref err) => Some(err.as_ref()),
             ErrorKind::Fault(ref err) => Some(err),
+            ErrorKind::String(_) => None,
         }
     }
 }
