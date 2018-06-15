@@ -1,8 +1,13 @@
 use iso8601;
+use xml::escape::escape_str_pcdata;
 
-pub fn escape_xml(s: &str) -> String {
-    // FIXME: This shouldn't need to allocate in all cases
-    s.replace("&", "&amp;").replace("<", "&lt;")
+use std::borrow::Cow;
+
+/// Escape a string for use as XML characters.
+///
+/// The resulting string is *not* suitable for use in XML attributes, but XML-RPC doesn't use those.
+pub fn escape_xml(s: &str) -> Cow<str> {
+    escape_str_pcdata(s)
 }
 
 pub fn format_datetime(date_time: &iso8601::DateTime) -> String {
