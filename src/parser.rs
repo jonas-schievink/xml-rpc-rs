@@ -258,7 +258,14 @@ impl<'a, R: Read> Parser<'a, R> {
                             XmlEvent::Characters(ref string) => {
                                 self.next()?;
                                 self.expect_close("base64")?;
-                                base64::decode(string).map_err(|_| {
+
+                                let config = base64::Config::new(
+                                    base64::CharacterSet::Standard,
+                                    true,       // enable padding (default)
+                                    true,       // accept and remove whitespace/linebreaks
+                                    base64::LineWrap::NoWrap,   // ignored for `decode`
+                                );
+                                base64::decode_config(string, config).map_err(|_| {
                                     self.invalid_value("base64", string.to_string())
                                 })?
                             },
@@ -524,6 +531,20 @@ mod tests {
     fn parses_base64() {
         assert_eq!(read_value("<value><base64>0J/QvtC10YXQsNC70Lgh</base64></value>"),
             Ok(Value::Base64("Поехали!".bytes().collect())));
+
+        assert_eq!(read_value("<value><base64> 0J/Qv tC10YXQ sNC70 Lgh  </base64></value>"),
+           Ok(Value::Base64("Поехали!".bytes().collect())));
+
+        assert_eq!(read_value("<value><base64>\n0J/QvtC10\nYXQsNC7\n0Lgh\n</base64></value>"),
+           Ok(Value::Base64("Поехали!".bytes().collect())));
+    }
+
+    #[test]
+    fn parses_empty_base64() {
+        assert_eq!(read_value("<value><base64></base64></value>"),
+                   Ok(Value::Base64(Vec::new())));
+        assert_eq!(read_value("<value><base64/></value>"),
+                   Ok(Value::Base64(Vec::new())));
     }
 
     #[test]
@@ -567,14 +588,6 @@ mod tests {
     fn parses_empty_value_as_string() {
         assert_eq!(read_value("<value></value>"),
                    Ok(Value::String(String::new())));
-    }
-
-    #[test]
-    fn parses_empty_base64() {
-        assert_eq!(read_value("<value><base64></base64></value>"),
-            Ok(Value::Base64(Vec::new())));
-        assert_eq!(read_value("<value><base64/></value>"),
-            Ok(Value::Base64(Vec::new())));
     }
 
     #[test]
