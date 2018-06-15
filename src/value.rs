@@ -53,30 +53,36 @@ use std::io::{self, Write};
 /// ```
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value {
-    /// `<i4>` or `<int>`, 32-bit signed integer.
+    /// A 32-bit signed integer (`<i4>` or `<int>`).
     Int(i32),
-    /// `<i8>`, 64-bit signed integer.
+    /// A 64-bit signed integer (`<i8>`).
     ///
     /// This is an XMLRPC extension and may not be supported by all clients / servers.
     Int64(i64),
-    /// `<boolean>`, 0 == `false`, 1 == `true`.
+    /// A boolean value (`<boolean>`, 0 == `false`, 1 == `true`).
     Bool(bool),
-    /// `<string>`
+    /// A string (`<string>`).
     // FIXME zero-copy? `Cow<'static, ..>`?
     String(String),
-    /// `<double>`
+    /// A double-precision IEEE 754 floating point number (`<double>`).
     Double(f64),
-    /// `<dateTime.iso8601>`, an ISO 8601 formatted date/time value.
+    /// An ISO 8601 formatted date/time value (`<dateTime.iso8601>`).
+    ///
+    /// Note that ISO 8601 is highly ambiguous and allows incomplete date-time specifications. For
+    /// example, servers will frequently leave out timezone information, in which case the client
+    /// must *know* which timezone is used by the server. For this reason, the contained `DateTime`
+    /// struct only contains the raw fields specified by the server, without any real date/time
+    /// functionality like what's offered by the `chrono` crate.
     DateTime(DateTime),
-    /// `<base64>`, base64-encoded binary data.
+    /// Base64-encoded binary data (`<base64>`).
     Base64(Vec<u8>),
 
-    /// `<struct>`, a mapping of named values.
+    /// A mapping of named values (`<struct>`).
     Struct(BTreeMap<String, Value>),
-    /// `<array>`, a list of arbitrary (heterogeneous) values.
+    /// A list of arbitrary (heterogeneous) values (`<array>`).
     Array(Vec<Value>),
 
-    /// `<nil/>`, the empty (Unit) value.
+    /// The empty (Unit) value (`<nil/>`).
     ///
     /// This is an XMLRPC [extension][ext] and may not be supported by all clients / servers.
     ///
