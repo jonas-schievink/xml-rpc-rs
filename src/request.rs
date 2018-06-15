@@ -28,6 +28,27 @@ impl<'a> Request<'a> {
         }
     }
 
+    /// Creates a "multicall" request that will perform multiple requests at once.
+    ///
+    /// This requires that the server supports the [`system.multicall`] method.
+    ///
+    /// [`system.multicall`]: https://mirrors.talideon.com/articles/multicall.html
+    #[allow(deprecated)]
+    pub fn multicall<'r, I>(requests: I) -> Self
+    where 'a: 'r, I: IntoIterator<Item=&'r Request<'a>> {
+        Request {
+            name: "system.multicall",
+            args: vec![Value::Array(requests.into_iter().map(|req| {
+                let mut multicall_struct: BTreeMap<String, Value> = BTreeMap::new();
+
+                multicall_struct.insert("methodName".into(), req.name.into());
+                multicall_struct.insert("params".into(), Value::Array(req.args.clone()));
+
+                Value::Struct(multicall_struct)
+            }).collect())],
+        }
+    }
+
     /// Appends an argument to be passed to the current list of arguments.
     pub fn arg<T: Into<Value>>(mut self, value: T) -> Self {
         self.args.push(value.into());
@@ -111,6 +132,7 @@ impl<'a> Request<'a> {
     ///
     /// * `methodName`: the request name
     /// * `params`: the request arguments
+    #[deprecated(since="0.11.2", note="use `Request::multicall` instead")]
     pub fn into_multicall_struct(self) -> Value {
         let mut multicall_struct: BTreeMap<String, Value> = BTreeMap::new();
 
