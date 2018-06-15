@@ -73,6 +73,17 @@ pub enum Value {
     /// must *know* which timezone is used by the server. For this reason, the contained `DateTime`
     /// struct only contains the raw fields specified by the server, without any real date/time
     /// functionality like what's offered by the `chrono` crate.
+    ///
+    /// To make matters worse, some clients [don't seem to support][wp-bug] time zone information in
+    /// datetime values. To ensure compatiblity, the xmlrpc crate will try to format datetime values
+    /// like the example given in the [specification] if the timezone offset is zero.
+    ///
+    /// Recommendation: Avoid `DateTime` if possible. A date and time can be specified more
+    /// precisely by formatting it using RFC 3339 and putting it in a [`String`].
+    ///
+    /// [wp-bug]: https://core.trac.wordpress.org/ticket/1633#comment:4
+    /// [specification]: http://xmlrpc.scripting.com/spec.html
+    /// [`String`]: #variant.String
     DateTime(DateTime),
     /// Base64-encoded binary data (`<base64>`).
     Base64(Vec<u8>),
