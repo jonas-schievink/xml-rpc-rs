@@ -347,7 +347,9 @@ mod tests {
 
     use Value;
     use error::Fault;
+
     use std::fmt::Debug;
+    use std::iter;
 
     fn read_response(xml: &str) -> ParseResult<Response> {
         parse_response(&mut xml.as_bytes())
@@ -698,5 +700,29 @@ mod tests {
     </params>
 </methodResponse>
 "##));
+    }
+
+    #[test]
+    fn duplicate_struct_member() {
+        // Duplicate struct members are overwritten with the last one
+        assert_eq!(read_value(r#"
+            <value>
+                <struct>
+                    <member>
+                        <name>A</name>
+                        <value>first</value>
+                    </member>
+                    <member>
+                        <name>A</name>
+                        <value>second</value>
+                    </member>
+                </struct>
+            </value>
+            "#), Ok(Value::Struct(
+                iter::once((
+                    "A".into(), "second".into()
+                )).collect()
+            ))
+        );
     }
 }
