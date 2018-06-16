@@ -2,16 +2,16 @@
 
 ## Unreleased
 
+### New Features
+
+* Add `Request::multicall` for easier execution of multiple calls via `system.multicall`
+
 ### Bugfixes
 
 * Better handling of `Value::DateTime`
   * Print the timezone if the zone offset is non-zero
   * Print the fractional part of the time if it's non-zero
 * Accept base64 values containing whitespace
-
-### New Features
-
-* Add `Request::multicall` for easier execution of multiple calls via `system.multicall`
 
 ## 0.11.1 - 2018-05-14
 
