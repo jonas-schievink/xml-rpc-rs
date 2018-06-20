@@ -68,7 +68,7 @@ fn run_tests() {
     err.fault().expect("returned error was not a fault");
 
     // perform a multicall
-    let result = Request::multicall(&[
+    let result = Request::new_multicall(&[
         Request::new("pow").arg(2).arg(4),
         Request::new("add").arg(2).arg(4),
         Request::new("doesn't exist"),

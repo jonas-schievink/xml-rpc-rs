@@ -4,7 +4,7 @@
 
 ### New Features
 
-* Add `Request::multicall` for easier execution of multiple calls via `system.multicall`
+* Add `Request::new_multicall` for easier execution of multiple calls via `system.multicall`
 
 ### Bugfixes
 

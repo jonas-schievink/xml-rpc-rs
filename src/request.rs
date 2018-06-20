@@ -34,7 +34,7 @@ impl<'a> Request<'a> {
     ///
     /// [`system.multicall`]: https://mirrors.talideon.com/articles/multicall.html
     #[allow(deprecated)]
-    pub fn multicall<'r, I>(requests: I) -> Self
+    pub fn new_multicall<'r, I>(requests: I) -> Self
     where 'a: 'r, I: IntoIterator<Item=&'r Request<'a>> {
         Request {
             name: "system.multicall",
