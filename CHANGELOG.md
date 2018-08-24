@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Breaking Changes
+
+* Bump the minimum supported Rust version and change the Rust version policy.
+
+  From now on, `xmlrpc` will adopt the same policy as [tokio] (on which we
+  depend): We will support the current Rust version and the 2 releases prior to
+  that (which currently means that we support 1.25.0+).
+  
+  Bumping the required Rust version is no longer considered a breaking change as
+  long as the latest 3 versions are still supported.
+
+[tokio]: https://github.com/tokio-rs/tokio
+
 ### New Features
 
 * Add `Request::new_multicall` for easier execution of multiple calls via `system.multicall`

@@ -8,6 +8,13 @@ This crate provides a simple implementation of the [XML-RPC specification](http:
 
 Please refer to the [changelog](CHANGELOG.md) to see what changed in the last releases.
 
+## Rust support
+
+This crate uses the same Rust versioning policy as [tokio]: It supports the last
+3 stable Rust releases. Increasing the minimum supported version is not
+considered a breaking change as long as the latest 3 versions are still
+supported.
+
 ## Usage
 
 Start by adding an entry to your `Cargo.toml`:
@@ -24,3 +31,5 @@ extern crate xmlrpc;
 ```
 
 See [`examples/client.rs`](examples/client.rs) for a small example which connects to a running Python XML-RPC server and calls a method. A more elaborate example that demonstrates how to implement a custom `Transport` to set a cookie header is provided in [`examples/custom-header.rs`](examples/custom-header.rs).
+
+[tokio]: https://github.com/tokio-rs/tokio
