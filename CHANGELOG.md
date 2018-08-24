@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+No changes.
+
+## 0.12.0 - 2018-08-24
+
 ### Breaking Changes
 
 * Bump the minimum supported Rust version and change the Rust version policy.
