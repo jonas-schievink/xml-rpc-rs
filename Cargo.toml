@@ -14,26 +14,28 @@ version = "0.12.0"
 base64 = "0.9.0"
 iso8601 = "0.2.0"
 xml-rs = "0.7.0"
-reqwest = { version = "0.8.0", optional = true }
+reqwest = { version = "0.9.0", optional = true }
+mime = { version = "0.3", optional = true }
 
 [dev-dependencies]
 version-sync = "0.5"
 
 [features]
-default = ["reqwest"]
+http = ["reqwest", "mime"]
+default = ["http"]
 
 [[example]]
 name = "client"
-required-features = ["reqwest"]
+required-features = ["http"]
 
 [[example]]
 name = "custom-header"
-required-features = ["reqwest"]
+required-features = ["http"]
 
 [[test]]
 name = "python"
 harness = false
-required-features = ["reqwest"]
+required-features = ["http"]
 
 [[test]]
 name = "version-numbers"

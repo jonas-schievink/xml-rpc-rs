@@ -24,5 +24,5 @@ pub use request::Request;
 pub use value::{Value, Index};
 pub use transport::Transport;
 
-#[cfg(feature = "reqwest")]
+#[cfg(feature = "http")]
 pub use transport::http;

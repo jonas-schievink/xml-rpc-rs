@@ -1,5 +1,7 @@
-#[cfg(feature = "reqwest")]
+#[cfg(feature = "http")]
 extern crate reqwest;
+#[cfg(feature = "http")]
+extern crate mime;
 
 use Value;
 use error::{Error, RequestErrorKind};
@@ -86,7 +88,7 @@ impl<'a> Request<'a> {
     /// HTTP POST request to the given URL. If you only use this method to perform requests, you
     /// don't need to depend on `reqwest` yourself.
     ///
-    /// This method is only available when the `reqwest` feature is enabled (this is the default).
+    /// This method is only available when the `http` feature is enabled (this is the default).
     ///
     /// # Errors
     ///
@@ -97,7 +99,7 @@ impl<'a> Request<'a> {
     ///
     /// [`Request::call`]: #method.call
     /// [`Transport`]: trait.Transport.html
-    #[cfg(feature = "reqwest")]
+    #[cfg(feature = "http")]
     pub fn call_url<U: reqwest::IntoUrl>(&self, url: U) -> Result<Value, Error> {
         // While we could implement `Transport` for `T: IntoUrl`, such an impl might not be
         // completely obvious (as it applies to `&str`), so I've added this method instead.
