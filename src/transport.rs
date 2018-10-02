@@ -9,7 +9,7 @@ use std::error::Error;
 /// corresponding response. A `Transport` implementor is passed to [`Request::call`] in order to use
 /// it to perform that request.
 ///
-/// The most commonly used transport is simple HTTP: If the `reqwest` feature is enabled (it is by
+/// The most commonly used transport is simple HTTP: If the `http` feature is enabled (it is by
 /// default), the reqwest `RequestBuilder` will implement this trait and send the XML-RPC
 /// [`Request`] via HTTP.
 ///
@@ -42,7 +42,7 @@ pub trait Transport {
 // everything and abs. links don't work locally.
 /// Provides helpers for implementing custom `Transport`s using reqwest.
 ///
-/// This module will be disabled if the `reqwest` feature is not enabled.
+/// This module will be disabled if the `http` feature is not enabled.
 ///
 /// The default [`Transport`] implementation for `RequestBuilder` looks roughly like
 /// this:
@@ -60,15 +60,18 @@ pub trait Transport {
 /// From this, you can build your own custom transports.
 ///
 /// [`Transport`]: ../trait.Transport.html
-#[cfg(feature = "reqwest")]
+#[cfg(feature = "http")]
 pub mod http {
     extern crate reqwest;
+    extern crate mime;
 
     use {Request, Transport};
-    use self::reqwest::{RequestBuilder, mime};
-    use self::reqwest::header::{ContentType, ContentLength, UserAgent};
+    use self::mime::Mime;
+    use self::reqwest::{RequestBuilder};
+    use self::reqwest::header::{CONTENT_TYPE, CONTENT_LENGTH, USER_AGENT};
 
     use std::error::Error;
+    use std::str::FromStr;
 
     /// Appends all HTTP headers required by the XML-RPC specification to the `RequestBuilder`.
     ///
@@ -79,14 +82,14 @@ pub mod http {
     /// Content-Type: text/xml; charset=utf-8
     /// Content-Length: $body_len
     /// ```
-    pub fn build_headers(builder: &mut RequestBuilder, body_len: u64) {
+    pub fn build_headers(builder: RequestBuilder, body_len: u64) -> RequestBuilder {
         // Set all required request headers
         // NB: The `Host` header is also required, but reqwest adds it automatically, since
         // HTTP/1.1 requires it.
         builder
-            .header(UserAgent::new("Rust xmlrpc"))
-            .header(ContentType("text/xml; charset=utf-8".parse().unwrap()))
-            .header(ContentLength(body_len));
+            .header(USER_AGENT, "Rust xmlrpc")
+            .header(CONTENT_TYPE, "text/xml; charset=utf-8")
+            .header(CONTENT_LENGTH, body_len)
     }
 
     /// Checks that a reqwest `Response` has a status code indicating success and verifies certain
@@ -100,7 +103,10 @@ pub mod http {
 
         // Check response headers
         // "The Content-Type is text/xml. Content-Length must be present and correct."
-        if let Some(content) = response.headers().get::<ContentType>() {
+        if let Some(content) = response.headers().get(CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| Mime::from_str(value).ok())
+        {
             // (we ignore this if the header is missing completely)
             match (content.type_(), content.subtype()) {
                 (mime::TEXT, mime::XML) => {},
@@ -123,16 +129,14 @@ pub mod http {
     impl Transport for RequestBuilder {
         type Stream = reqwest::Response;
 
-        fn transmit(mut self, request: &Request) -> Result<Self::Stream, Box<Error + Send + Sync>> {
+        fn transmit(self, request: &Request) -> Result<Self::Stream, Box<Error + Send + Sync>> {
             // First, build the body XML
             let mut body = Vec::new();
             // This unwrap never panics as we are using `Vec<u8>` as a `Write` implementor,
             // and not doing anything else that could return an `Err` in `write_as_xml()`.
             request.write_as_xml(&mut body).unwrap();
 
-            build_headers(&mut self, body.len() as u64);
-
-            let response = self
+            let response = build_headers(self, body.len() as u64)
                 .body(body)
                 .send()?;
 
