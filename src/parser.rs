@@ -5,7 +5,6 @@ use error::ParseError;
 
 use base64;
 use xml::reader::{XmlEvent, EventReader};
-use xml::name::OwnedName;
 use xml::common::Position;
 use xml::ParserConfig;
 use iso8601::datetime;
@@ -76,26 +75,23 @@ impl<'a, R: Read> Parser<'a, R> {
     /// Expects that the current token is an opening tag like `<tag>` without attributes (and a
     /// local name without namespaces). If not, returns an error.
     fn expect_open(&mut self, tag: &str) -> ParseResult<()> {
-        match self.cur.clone() {
-            XmlEvent::StartElement { ref name, .. }
-            if name == &OwnedName::local(tag) => {
-                self.next()?;
-                Ok(())
-            }
+        match self.cur {
+            XmlEvent::StartElement { ref name, .. } if name.local_name == tag => {},
             _ => return self.expected(format!("<{}>", tag)),
         }
+        self.next()?;
+        Ok(())
     }
 
     /// Expects that the current token is a closing tag like `</tag>` with a local name without
     /// namespaces. If not, returns an error.
     fn expect_close(&mut self, tag: &str) -> ParseResult<()> {
-        match self.cur.clone() {
-            XmlEvent::EndElement { ref name } if name == &OwnedName::local(tag) => {
-                self.next()?;
-                Ok(())
-            }
-            _ => self.expected(format!("</{}>", tag)),
+        match self.cur {
+            XmlEvent::EndElement { ref name } if name.local_name == tag => {},
+            _ => return self.expected(format!("</{}>", tag)),
         }
+        self.next()?;
+        Ok(())
     }
 
     /// Builds and returns an `Err(UnexpectedXml)`.
@@ -135,14 +131,14 @@ impl<'a, R: Read> Parser<'a, R> {
         // <fault> / <params>
         match self.cur.clone() {
             XmlEvent::StartElement { ref name, .. } => {
-                if name == &OwnedName::local("fault") {
+                if name.local_name == "fault" {
                     self.next()?;
                     let value = self.parse_value()?;
                     let fault = Fault::from_value(&value).ok_or_else(|| {
                         io::Error::new(ErrorKind::Other, "malformed <fault>")
                     })?;
                     response = Err(fault);
-                } else if name == &OwnedName::local("params") {
+                } else if name.local_name == "params" {
                     self.next()?;
                     // <param>
                     self.expect_open("param")?;
@@ -199,8 +195,8 @@ impl<'a, R: Read> Parser<'a, R> {
 
                             // <name>NAME</name>
                             self.expect_open("name")?;
-                            let name = match self.cur.clone() {
-                                XmlEvent::Characters(string) => string,
+                            let name = match self.cur {
+                                XmlEvent::Characters(ref string) => string.clone(),
                                 _ => return self.expected("characters"),
                             };
                             self.next()?;
