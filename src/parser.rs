@@ -94,6 +94,20 @@ impl<'a, R: Read> Parser<'a, R> {
         Ok(())
     }
 
+    /// Expects that the current token is a characters sequence. Parses and returns a value.
+    fn expect_value<T, E>(&mut self, for_type: &'static str, parse: impl Fn(&str) -> Result<T, E>) -> ParseResult<T> {
+        let value = match self.cur {
+            XmlEvent::Characters(ref string) => {
+                parse(string).map_err(|_| {
+                    self.invalid_value(for_type, string.to_owned())
+                })?
+            },
+            _ => return self.expected("characters"),
+        };
+        self.next()?;
+        Ok(value)
+    }
+
     /// Builds and returns an `Err(UnexpectedXml)`.
     fn expected<T, E: ToString>(&self, expected: E) -> ParseResult<T> {
         let expected = expected.to_string();
@@ -273,52 +287,43 @@ impl<'a, R: Read> Parser<'a, R> {
                         };
                         Value::Base64(data)
                     }
-                    _ => {
+                    "i4" | "int" => {
                         self.next()?;
-                        // All other types expect raw characters...
-                        let data = match self.cur.clone() {
-                            XmlEvent::Characters(string) => string,
-                            _ => return self.expected("characters"),
-                        };
-
-                        let value = match name {
-                            "i4" | "int" => {
-                                Value::Int(data.parse::<i32>().map_err(|_| {
-                                    self.invalid_value("integer", data)
-                                })?)
-                            }
-                            "i8" => {
-                                Value::Int64(data.parse::<i64>().map_err(|_| {
-                                    self.invalid_value("i8", data)
-                                })?)
-                            }
-                            "boolean" => {
-                                let val = match &*data {
-                                    "0" => false,
-                                    "1" => true,
-                                    _ => return Err(self.invalid_value("boolean", data)),
-                                };
-                                Value::Bool(val)
-                            }
-                            "double" => {
-                                Value::Double(data.parse::<f64>().map_err(|_| {
-                                    self.invalid_value("double", data)
-                                })?)
-                            }
-                            "dateTime.iso8601" => {
-                                Value::DateTime(datetime(&data).map_err(|_| {
-                                    self.invalid_value("dateTime.iso8601", data)
-                                })?)
-                            }
-                            _ => return self.expected("valid type tag or characters"),
-                        };
-
-                        self.next()?;
-                        // ...and a corresponding close tag
+                        let value = self.expect_value("integer", |data| data.parse::<i32>().map(Value::Int))?;
                         self.expect_close(name)?;
-
                         value
                     }
+                    "i8" => {
+                        self.next()?;
+                        let value = self.expect_value("i8", |data| data.parse::<i64>().map(Value::Int64))?;
+                        self.expect_close(name)?;
+                        value
+                    }
+                    "boolean" => {
+                        self.next()?;
+                        let value = self.expect_value("boolean", |data| {
+                            match data {
+                                "0" => Ok(Value::Bool(false)),
+                                "1" => Ok(Value::Bool(true)),
+                                _ => Err(()),
+                            }
+                        })?;
+                        self.expect_close(name)?;
+                        value
+                    }
+                    "double" => {
+                        self.next()?;
+                        let value = self.expect_value("double", |data| data.parse::<f64>().map(Value::Double))?;
+                        self.expect_close(name)?;
+                        value
+                    }
+                    "dateTime.iso8601" => {
+                        self.next()?;
+                        let value = self.expect_value("dateTime.iso8601", |data| datetime(data).map(Value::DateTime))?;
+                        self.expect_close(name)?;
+                        value
+                    }
+                    _ => return self.expected("valid type tag"),
                 }
             }
             XmlEvent::Characters(string) => {
@@ -655,10 +660,9 @@ mod tests {
             "unexpected XML at 1:1 (expected tag <value> without attributes, found end of data)"
         );
 
-        // FIXME: This one could use some improvement:
         assert_eq!(
             errstr(r#"<value><SURPRISE></SURPRISE></value>"#),
-            "unexpected XML at 1:18 (expected characters, found </SURPRISE>)"
+            "unexpected XML at 1:8 (expected valid type tag, found <SURPRISE>)"
         );
 
         assert_eq!(
