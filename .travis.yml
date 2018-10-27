@@ -4,6 +4,10 @@ rust:
   - stable
   - nightly
 sudo: false
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
 env:
   global:
     - RUSTFLAGS="--deny warnings"
