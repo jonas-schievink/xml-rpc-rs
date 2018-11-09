@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-No changes.
+### Breaking Changes
+
+* Update reqwest to 0.9 to fix openssl-related build failures
+  ([#44](https://github.com/jonas-schievink/xml-rpc-rs/pull/44))
 
 ## 0.12.0 - 2018-08-24
 
