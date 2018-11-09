@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+No changes.
+
+## 0.13.0 - 2018-11-09
+
 ### Breaking Changes
 
 * Update reqwest to 0.9 to fix openssl-related build failures
