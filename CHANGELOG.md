@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-No changes.
+### Misc
+
+* Update internal dependencies
 
 ## 0.13.0 - 2018-11-09
 
@@ -20,7 +22,7 @@ No changes.
   From now on, `xmlrpc` will adopt the same policy as [tokio] (on which we
   depend): We will support the current Rust version and the 2 releases prior to
   that (which currently means that we support 1.25.0+).
-  
+
   Bumping the required Rust version is no longer considered a breaking change as
   long as the latest 3 versions are still supported.
 
