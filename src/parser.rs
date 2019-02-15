@@ -269,13 +269,10 @@ impl<'a, R: Read> Parser<'a, R> {
                                 self.next()?;
                                 self.expect_close("base64")?;
 
-                                let config = base64::Config::new(
-                                    base64::CharacterSet::Standard,
-                                    true,       // enable padding (default)
-                                    true,       // accept and remove whitespace/linebreaks
-                                    base64::LineWrap::NoWrap,   // ignored for `decode`
-                                );
-                                base64::decode_config(string, config).map_err(|_| {
+                                let stripped: Vec<_> = string.bytes()
+                                    .filter(|b| !b" \n\t\r\x0b\x0c".contains(b))
+                                    .collect();
+                                base64::decode(&stripped).map_err(|_| {
                                     self.invalid_value("base64", string.to_string())
                                 })?
                             },
