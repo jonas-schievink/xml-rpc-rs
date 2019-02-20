@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-No changes.
+### Breaking Changes
+
+* Updated `iso8601` dependency to 0.3.0
 
 ## 0.13.1 - 2019-02-20
 
