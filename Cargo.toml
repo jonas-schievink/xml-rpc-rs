@@ -8,7 +8,7 @@ categories = ["network-programming", "encoding"]
 readme = "README.md"
 license = "CC0-1.0"
 name = "xmlrpc"
-version = "0.13.0"
+version = "0.13.1"
 
 [badges]
 travis-ci = { repository = "jonas-schievink/xml-rpc-rs" }

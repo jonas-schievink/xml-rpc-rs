@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+No changes.
+
+## 0.13.1 - 2019-02-20
+
 ### Misc
 
 * Update internal dependencies
