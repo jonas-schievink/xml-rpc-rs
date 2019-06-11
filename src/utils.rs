@@ -7,7 +7,7 @@ use std::fmt::Write;
 /// Escape a string for use as XML characters.
 ///
 /// The resulting string is *not* suitable for use in XML attributes, but XML-RPC doesn't use those.
-pub fn escape_xml(s: &str) -> Cow<str> {
+pub fn escape_xml(s: &str) -> Cow<'_, str> {
     escape_str_pcdata(s)
 }
 

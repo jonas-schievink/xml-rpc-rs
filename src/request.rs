@@ -1,7 +1,5 @@
 #[cfg(feature = "http")]
 extern crate reqwest;
-#[cfg(feature = "http")]
-extern crate mime;
 
 use Value;
 use error::{Error, RequestErrorKind};

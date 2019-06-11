@@ -36,7 +36,7 @@ impl From<RequestErrorKind> for Error {
 }
 
 impl Display for Error {
-    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         self.0.fmt(fmt)
     }
 }
@@ -58,7 +58,7 @@ pub enum RequestErrorKind {
     ParseError(ParseError),
 
     /// A communication error originating from the transport used to perform the request.
-    TransportError(Box<error::Error + Send + Sync>),
+    TransportError(Box<dyn error::Error + Send + Sync>),
 
     /// The server returned a `<fault>` response, indicating that the execution of the call
     /// encountered a problem (for example, an invalid (number of) arguments was passed).
@@ -78,7 +78,7 @@ impl From<Fault> for RequestErrorKind {
 }
 
 impl Display for RequestErrorKind {
-    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         match *self {
             RequestErrorKind::ParseError(ref err) => write!(fmt, "parse error: {}", err),
             RequestErrorKind::TransportError(ref err) => write!(fmt, "transport error: {}", err),
@@ -96,7 +96,7 @@ impl error::Error for RequestErrorKind {
         }
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             RequestErrorKind::ParseError(ref err) => Some(err),
             RequestErrorKind::TransportError(ref err) => Some(err.as_ref()),
@@ -146,7 +146,7 @@ impl From<io::Error> for ParseError {
 }
 
 impl Display for ParseError {
-    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         match *self {
             ParseError::XmlError(ref err) => write!(fmt, "malformed XML: {}", err),
             ParseError::InvalidValue {
@@ -237,7 +237,7 @@ impl Fault {
 }
 
 impl Display for Fault {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{} ({})", self.fault_string, self.fault_code)
     }
 }

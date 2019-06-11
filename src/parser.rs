@@ -18,7 +18,7 @@ pub type Response = Result<Value, Fault>;
 
 type ParseResult<T> = Result<T, ParseError>;
 
-pub struct Parser<'a, R: Read + 'a> {
+pub struct Parser<'a, R: Read> {
     reader: EventReader<&'a mut R>,
     /// Current "token". The parser makes decisions based on this token, then pulls the next one
     /// from `reader`.

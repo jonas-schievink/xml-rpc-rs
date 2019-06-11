@@ -35,7 +35,7 @@ pub trait Transport {
     /// return an appropriate [`Error`] to the caller.
     ///
     /// [`Error`]: struct.Error.html
-    fn transmit(self, request: &Request) -> Result<Self::Stream, Box<Error + Send + Sync>>;
+    fn transmit(self, request: &Request<'_>) -> Result<Self::Stream, Box<dyn Error + Send + Sync>>;
 }
 
 // FIXME: Link to `Transport` and `RequestBuilder` using intra-rustdoc links. Relative links break
@@ -94,7 +94,7 @@ pub mod http {
 
     /// Checks that a reqwest `Response` has a status code indicating success and verifies certain
     /// headers.
-    pub fn check_response(response: &reqwest::Response) -> Result<(), Box<Error + Send + Sync>> {
+    pub fn check_response(response: &reqwest::Response) -> Result<(), Box<dyn Error + Send + Sync>> {
         // This is essentially an open-coded version of `Response::error_for_status` that does not
         // consume the response.
         if response.status().is_client_error() || response.status().is_server_error() {
@@ -129,7 +129,7 @@ pub mod http {
     impl Transport for RequestBuilder {
         type Stream = reqwest::Response;
 
-        fn transmit(self, request: &Request) -> Result<Self::Stream, Box<Error + Send + Sync>> {
+        fn transmit(self, request: &Request<'_>) -> Result<Self::Stream, Box<dyn Error + Send + Sync>> {
             // First, build the body XML
             let mut body = Vec::new();
             // This unwrap never panics as we are using `Vec<u8>` as a `Write` implementor,
