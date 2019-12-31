@@ -1,14 +1,14 @@
 #[cfg(feature = "http")]
 extern crate reqwest;
 
-use Value;
 use error::{Error, RequestErrorKind};
-use utils::escape_xml;
-use transport::Transport;
 use parser::parse_response;
+use transport::Transport;
+use utils::escape_xml;
+use Value;
 
-use std::io::{self, Write};
 use std::collections::BTreeMap;
+use std::io::{self, Write};
 
 /// A request to call a procedure.
 #[derive(Clone, Debug)]
@@ -35,17 +35,25 @@ impl<'a> Request<'a> {
     /// [`system.multicall`]: https://mirrors.talideon.com/articles/multicall.html
     #[allow(deprecated)]
     pub fn new_multicall<'r, I>(requests: I) -> Self
-    where 'a: 'r, I: IntoIterator<Item=&'r Request<'a>> {
+    where
+        'a: 'r,
+        I: IntoIterator<Item = &'r Request<'a>>,
+    {
         Request {
             name: "system.multicall",
-            args: vec![Value::Array(requests.into_iter().map(|req| {
-                let mut multicall_struct: BTreeMap<String, Value> = BTreeMap::new();
+            args: vec![Value::Array(
+                requests
+                    .into_iter()
+                    .map(|req| {
+                        let mut multicall_struct: BTreeMap<String, Value> = BTreeMap::new();
 
-                multicall_struct.insert("methodName".into(), req.name.into());
-                multicall_struct.insert("params".into(), Value::Array(req.args.clone()));
+                        multicall_struct.insert("methodName".into(), req.name.into());
+                        multicall_struct.insert("params".into(), Value::Array(req.args.clone()));
 
-                Value::Struct(multicall_struct)
-            }).collect())],
+                        Value::Struct(multicall_struct)
+                    })
+                    .collect(),
+            )],
         }
     }
 
@@ -69,7 +77,8 @@ impl<'a> Request<'a> {
     /// [`call_url`]: #method.call_url
     /// [`Transport`]: trait.Transport.html
     pub fn call<T: Transport>(&self, transport: T) -> Result<Value, Error> {
-        let mut reader = transport.transmit(self)
+        let mut reader = transport
+            .transmit(self)
             .map_err(RequestErrorKind::TransportError)?;
 
         let response = parse_response(&mut reader).map_err(RequestErrorKind::ParseError)?;
@@ -114,7 +123,11 @@ impl<'a> Request<'a> {
     pub fn write_as_xml<W: Write>(&self, fmt: &mut W) -> io::Result<()> {
         write!(fmt, r#"<?xml version="1.0" encoding="utf-8"?>"#)?;
         write!(fmt, r#"<methodCall>"#)?;
-        write!(fmt, r#"    <methodName>{}</methodName>"#, escape_xml(&self.name))?;
+        write!(
+            fmt,
+            r#"    <methodName>{}</methodName>"#,
+            escape_xml(&self.name)
+        )?;
         write!(fmt, r#"    <params>"#)?;
         for value in &self.args {
             write!(fmt, r#"        <param>"#)?;
@@ -132,7 +145,7 @@ impl<'a> Request<'a> {
     ///
     /// * `methodName`: the request name
     /// * `params`: the request arguments
-    #[deprecated(since="0.11.2", note="use `Request::multicall` instead")]
+    #[deprecated(since = "0.11.2", note = "use `Request::multicall` instead")]
     pub fn into_multicall_struct(self) -> Value {
         let mut multicall_struct: BTreeMap<String, Value> = BTreeMap::new();
 
@@ -154,8 +167,7 @@ mod tests {
         let req = Request::new("x<&x");
 
         req.write_as_xml(&mut output).unwrap();
-        assert!(
-            str::from_utf8(&output)
+        assert!(str::from_utf8(&output)
             .unwrap()
             .contains("<methodName>x&lt;&amp;x</methodName>"));
     }

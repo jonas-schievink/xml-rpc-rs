@@ -1,4 +1,4 @@
-use iso8601::{Date, Time, DateTime};
+use iso8601::{Date, DateTime, Time};
 use xml::escape::escape_str_pcdata;
 
 use std::borrow::Cow;
@@ -20,15 +20,20 @@ pub fn escape_xml(s: &str) -> Cow<'_, str> {
 /// [wp-bug]: https://core.trac.wordpress.org/ticket/1633#comment:4
 pub fn format_datetime(date_time: &DateTime) -> String {
     let Time {
-        hour, minute, second, millisecond, tz_offset_hours, tz_offset_minutes
+        hour,
+        minute,
+        second,
+        millisecond,
+        tz_offset_hours,
+        tz_offset_minutes,
     } = date_time.time;
-    
+
     match date_time.date {
         Date::YMD { year, month, day } => {
             // The base format is based directly on the example in the spec and should always work:
-            let mut string = format!("{:04}{:02}{:02}T{:02}:{:02}:{:02}",
-                year, month, day,
-                hour, minute, second
+            let mut string = format!(
+                "{:04}{:02}{:02}T{:02}:{:02}:{:02}",
+                year, month, day, hour, minute, second
             );
             // Only append milliseconds when they're >0
             if millisecond > 0 {
@@ -36,16 +41,19 @@ pub fn format_datetime(date_time: &DateTime) -> String {
             }
             // Only append time zone info if the offset is specified and not 00:00
             if tz_offset_hours != 0 || tz_offset_minutes != 0 {
-                write!(string, "{:+03}:{:02}", tz_offset_hours, tz_offset_minutes.abs()).unwrap();
+                write!(
+                    string,
+                    "{:+03}:{:02}",
+                    tz_offset_hours,
+                    tz_offset_minutes.abs()
+                )
+                .unwrap();
             }
 
             string
         }
         // Other format are just not supported at all:
-        Date::Week { .. }
-        | Date::Ordinal { .. } => {
-            unimplemented!()
-        }
+        Date::Week { .. } | Date::Ordinal { .. } => unimplemented!(),
     }
 }
 

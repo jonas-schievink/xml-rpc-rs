@@ -2,12 +2,12 @@
 
 extern crate xmlrpc;
 
-use xmlrpc::{Request, Value, Fault};
+use xmlrpc::{Fault, Request, Value};
 
+use std::net::TcpStream;
 use std::process::{Child, Command};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
-use std::net::TcpStream;
 
 const PORT: u16 = 8000;
 const URL: &'static str = "http://127.0.0.1:8000";
@@ -27,19 +27,23 @@ fn setup() -> Result<Reap, ()> {
     let mut child = match Command::new("python3")
         .arg("-m")
         .arg("xmlrpc.server")
-        .spawn() {
+        .spawn()
+    {
         Ok(child) => child,
         Err(e) => {
-            eprintln!("could not start python XML-RPC server, ignoring python test ({})", e);
+            eprintln!(
+                "could not start python XML-RPC server, ignoring python test ({})",
+                e
+            );
             return Err(());
-        },
+        }
     };
 
     // wait until someone listens on the port or the child dies
     let mut iteration = 0;
     loop {
         match child.try_wait().unwrap() {
-            None => {}, // still running
+            None => {} // still running
             Some(status) => panic!("python process unexpectedly died: {}", status),
         }
 
@@ -47,10 +51,14 @@ fn setup() -> Result<Reap, ()> {
         match TcpStream::connect(("127.0.0.1", PORT)) {
             Ok(_) => {
                 // server should work now
-                println!("connected to server after {:?} (iteration {})", Instant::now() - start, iteration);
-                return Ok(Reap(child))
-            },
-            Err(_) => {},       // not yet ready
+                println!(
+                    "connected to server after {:?} (iteration {})",
+                    Instant::now() - start,
+                    iteration
+                );
+                return Ok(Reap(child));
+            }
+            Err(_) => {} // not yet ready
         }
 
         sleep(Duration::from_millis(50));
@@ -64,7 +72,12 @@ fn run_tests() {
     assert_eq!(pow.as_i64(), Some(2i64.pow(8)));
 
     // call with wrong operands should return a fault
-    let err = Request::new("pow").arg(2).arg(2).arg("BLA").call_url(URL).unwrap_err();
+    let err = Request::new("pow")
+        .arg(2)
+        .arg(2)
+        .arg("BLA")
+        .call_url(URL)
+        .unwrap_err();
     err.fault().expect("returned error was not a fault");
 
     // perform a multicall
@@ -72,7 +85,9 @@ fn run_tests() {
         Request::new("pow").arg(2).arg(4),
         Request::new("add").arg(2).arg(4),
         Request::new("doesn't exist"),
-    ]).call_url(URL).unwrap();
+    ])
+    .call_url(URL)
+    .unwrap();
     // `result` now contains an array of results. on success, a 1-element array containing the
     // result is placed in the `result` array. on fault, the corresponding fault struct is used.
     let results = result.as_array().unwrap();
@@ -88,7 +103,7 @@ fn main() {
     };
 
     match reaper.0.try_wait().unwrap() {
-        None => {},     // still running
+        None => {} // still running
         Some(status) => {
             panic!("python process unexpectedly exited: {}", status);
         }
@@ -97,7 +112,7 @@ fn main() {
     run_tests();
 
     match reaper.0.try_wait().unwrap() {
-        None => {},     // still running
+        None => {} // still running
         Some(status) => {
             panic!("python process unexpectedly exited: {}", status);
         }

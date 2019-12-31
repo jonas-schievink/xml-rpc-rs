@@ -2,12 +2,12 @@
 
 use Value;
 
-use xml::reader::Error as XmlError;
 use xml::common::TextPosition;
+use xml::reader::Error as XmlError;
 
-use std::{error, io};
-use std::fmt::{self, Formatter, Display};
 use std::collections::BTreeMap;
+use std::fmt::{self, Display, Formatter};
+use std::{error, io};
 
 /// Errors that can occur when trying to perform an XML-RPC request.
 ///
@@ -28,7 +28,7 @@ impl Error {
     }
 }
 
-#[doc(hidden)]  // hide internal impl
+#[doc(hidden)] // hide internal impl
 impl From<RequestErrorKind> for Error {
     fn from(kind: RequestErrorKind) -> Self {
         Error(kind)
@@ -130,7 +130,7 @@ pub enum ParseError {
         found: Option<String>,
         /// The position of the unexpected data inside the XML document.
         position: TextPosition,
-    }
+    },
 }
 
 impl From<XmlError> for ParseError {
@@ -153,21 +153,29 @@ impl Display for ParseError {
                 for_type,
                 ref found,
                 ref position,
-            } => write!(fmt, "invalid value for type '{}' at {}: {}", for_type, position, found),
+            } => write!(
+                fmt,
+                "invalid value for type '{}' at {}: {}",
+                for_type, position, found
+            ),
             ParseError::UnexpectedXml {
                 ref expected,
                 ref position,
                 found: None,
-            } => {
-                write!(fmt, "unexpected XML at {} (expected {})", position, expected)
-            }
+            } => write!(
+                fmt,
+                "unexpected XML at {} (expected {})",
+                position, expected
+            ),
             ParseError::UnexpectedXml {
                 ref expected,
                 ref position,
                 found: Some(ref found),
-            } => {
-                write!(fmt, "unexpected XML at {} (expected {}, found {})", position, expected, found)
-            }
+            } => write!(
+                fmt,
+                "unexpected XML at {} (expected {}, found {})",
+                position, expected, found
+            ),
         }
     }
 }
@@ -216,10 +224,10 @@ impl Fault {
                             fault_string: fault_string.to_string(),
                         })
                     }
-                    _ => None
+                    _ => None,
                 }
             }
-            _ => None
+            _ => None,
         }
     }
 
@@ -230,7 +238,10 @@ impl Fault {
     pub fn to_value(&self) -> Value {
         let mut map = BTreeMap::new();
         map.insert("faultCode".to_string(), Value::from(self.fault_code));
-        map.insert("faultString".to_string(), Value::from(self.fault_string.as_ref()));
+        map.insert(
+            "faultString".to_string(),
+            Value::from(self.fault_string.as_ref()),
+        );
 
         Value::Struct(map)
     }
@@ -258,7 +269,7 @@ mod tests {
     fn fault_roundtrip() {
         let input = Fault {
             fault_code: -123456,
-            fault_string: "The Bald Lazy House Jumps Over The Hyperactive Kitten".to_string()
+            fault_string: "The Bald Lazy House Jumps Over The Hyperactive Kitten".to_string(),
         };
 
         assert_eq!(Fault::from_value(&input.to_value()), Some(input));

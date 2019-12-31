@@ -16,14 +16,14 @@ extern crate xml;
 mod error;
 mod parser;
 mod request;
-mod value;
-mod utils;
 mod transport;
+mod utils;
+mod value;
 
 pub use error::{Error, Fault};
 pub use request::Request;
-pub use value::{Value, Index};
 pub use transport::Transport;
+pub use value::{Index, Value};
 
 #[cfg(feature = "http")]
 pub use transport::http;

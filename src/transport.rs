@@ -1,7 +1,7 @@
 use Request;
 
-use std::io::Read;
 use std::error::Error;
+use std::io::Read;
 
 /// Request and response transport abstraction.
 ///
@@ -62,13 +62,13 @@ pub trait Transport {
 /// [`Transport`]: ../trait.Transport.html
 #[cfg(feature = "http")]
 pub mod http {
-    extern crate reqwest;
     extern crate mime;
+    extern crate reqwest;
 
-    use {Request, Transport};
     use self::mime::Mime;
-    use self::reqwest::{RequestBuilder};
-    use self::reqwest::header::{CONTENT_TYPE, CONTENT_LENGTH, USER_AGENT};
+    use self::reqwest::header::{CONTENT_LENGTH, CONTENT_TYPE, USER_AGENT};
+    use self::reqwest::RequestBuilder;
+    use {Request, Transport};
 
     use std::error::Error;
     use std::str::FromStr;
@@ -94,7 +94,9 @@ pub mod http {
 
     /// Checks that a reqwest `Response` has a status code indicating success and verifies certain
     /// headers.
-    pub fn check_response(response: &reqwest::Response) -> Result<(), Box<dyn Error + Send + Sync>> {
+    pub fn check_response(
+        response: &reqwest::Response,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
         // This is essentially an open-coded version of `Response::error_for_status` that does not
         // consume the response.
         if response.status().is_client_error() || response.status().is_server_error() {
@@ -103,16 +105,20 @@ pub mod http {
 
         // Check response headers
         // "The Content-Type is text/xml. Content-Length must be present and correct."
-        if let Some(content) = response.headers().get(CONTENT_TYPE)
+        if let Some(content) = response
+            .headers()
+            .get(CONTENT_TYPE)
             .and_then(|value| value.to_str().ok())
             .and_then(|value| Mime::from_str(value).ok())
         {
             // (we ignore this if the header is missing completely)
             match (content.type_(), content.subtype()) {
-                (mime::TEXT, mime::XML) => {},
-                (ty, sub) => return Err(
-                    format!("expected Content-Type 'text/xml', got '{}/{}'", ty, sub).into()
-                ),
+                (mime::TEXT, mime::XML) => {}
+                (ty, sub) => {
+                    return Err(
+                        format!("expected Content-Type 'text/xml', got '{}/{}'", ty, sub).into(),
+                    )
+                }
             }
         }
 
@@ -129,16 +135,17 @@ pub mod http {
     impl Transport for RequestBuilder {
         type Stream = reqwest::Response;
 
-        fn transmit(self, request: &Request<'_>) -> Result<Self::Stream, Box<dyn Error + Send + Sync>> {
+        fn transmit(
+            self,
+            request: &Request<'_>,
+        ) -> Result<Self::Stream, Box<dyn Error + Send + Sync>> {
             // First, build the body XML
             let mut body = Vec::new();
             // This unwrap never panics as we are using `Vec<u8>` as a `Write` implementor,
             // and not doing anything else that could return an `Err` in `write_as_xml()`.
             request.write_as_xml(&mut body).unwrap();
 
-            let response = build_headers(self, body.len() as u64)
-                .body(body)
-                .send()?;
+            let response = build_headers(self, body.len() as u64).body(body).send()?;
 
             check_response(&response)?;
 

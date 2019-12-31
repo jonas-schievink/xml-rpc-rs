@@ -127,7 +127,11 @@ impl Value {
                 writeln!(fmt, "<double>{}</double>", d)?;
             }
             Value::DateTime(date_time) => {
-                writeln!(fmt, "<dateTime.iso8601>{}</dateTime.iso8601>", format_datetime(&date_time))?;
+                writeln!(
+                    fmt,
+                    "<dateTime.iso8601>{}</dateTime.iso8601>",
+                    format_datetime(&date_time)
+                )?;
             }
             Value::Base64(ref data) => {
                 writeln!(fmt, "<base64>{}</base64>", encode(data))?;
@@ -181,7 +185,7 @@ impl Value {
     pub fn as_i32(&self) -> Option<i32> {
         match *self {
             Value::Int(i) => Some(i),
-            _ => None
+            _ => None,
         }
     }
 
@@ -192,7 +196,7 @@ impl Value {
         match *self {
             Value::Int(i) => Some(i64::from(i)),
             Value::Int64(i) => Some(i),
-            _ => None
+            _ => None,
         }
     }
 
@@ -200,7 +204,7 @@ impl Value {
     pub fn as_bool(&self) -> Option<bool> {
         match *self {
             Value::Bool(b) => Some(b),
-            _ => None
+            _ => None,
         }
     }
 
@@ -208,7 +212,7 @@ impl Value {
     pub fn as_str(&self) -> Option<&str> {
         match *self {
             Value::String(ref s) => Some(s),
-            _ => None
+            _ => None,
         }
     }
 
@@ -217,7 +221,7 @@ impl Value {
     pub fn as_f64(&self) -> Option<f64> {
         match *self {
             Value::Double(d) => Some(d),
-            _ => None
+            _ => None,
         }
     }
 
@@ -225,7 +229,7 @@ impl Value {
     pub fn as_datetime(&self) -> Option<DateTime> {
         match *self {
             Value::DateTime(dt) => Some(dt),
-            _ => None
+            _ => None,
         }
     }
 
@@ -233,7 +237,7 @@ impl Value {
     pub fn as_bytes(&self) -> Option<&[u8]> {
         match *self {
             Value::Base64(ref data) => Some(data),
-            _ => None
+            _ => None,
         }
     }
 
@@ -241,7 +245,7 @@ impl Value {
     pub fn as_struct(&self) -> Option<&BTreeMap<String, Value>> {
         match *self {
             Value::Struct(ref map) => Some(map),
-            _ => None
+            _ => None,
         }
     }
 
@@ -249,7 +253,7 @@ impl Value {
     pub fn as_array(&self) -> Option<&[Value]> {
         match *self {
             Value::Array(ref array) => Some(array),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -355,13 +359,19 @@ impl Index for usize {
     }
 }
 
-impl<'a, I> Index for &'a I where I: Index + ?Sized {
+impl<'a, I> Index for &'a I
+where
+    I: Index + ?Sized,
+{
     fn get<'v>(&self, value: &'v Value) -> Option<&'v Value> {
         (*self).get(value)
     }
 }
 
-impl<I> ::std::ops::Index<I> for Value where I: Index {
+impl<I> ::std::ops::Index<I> for Value
+where
+    I: Index,
+{
     type Output = Value;
     fn index(&self, index: I) -> &Self::Output {
         index.get(self).unwrap_or(&Value::Nil)
@@ -371,15 +381,20 @@ impl<I> ::std::ops::Index<I> for Value where I: Index {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::str;
     use std::collections::BTreeMap;
+    use std::str;
 
     #[test]
     fn escapes_strings() {
         let mut output: Vec<u8> = Vec::new();
 
-        Value::from("<xml>&nbsp;string").write_as_xml(&mut output).unwrap();
-        assert_eq!(str::from_utf8(&output).unwrap(), "<value>\n<string>&lt;xml>&amp;nbsp;string</string>\n</value>\n");
+        Value::from("<xml>&nbsp;string")
+            .write_as_xml(&mut output)
+            .unwrap();
+        assert_eq!(
+            str::from_utf8(&output).unwrap(),
+            "<value>\n<string>&lt;xml>&amp;nbsp;string</string>\n</value>\n"
+        );
     }
 
     #[test]
@@ -397,7 +412,10 @@ mod tests {
         let mut map: BTreeMap<String, Value> = BTreeMap::new();
         map.insert("name".to_string(), Value::from("John Doe"));
         map.insert("age".to_string(), Value::from(37));
-        map.insert("children".to_string(), Value::Array(vec![Value::from("Mark"), Value::from("Jennyfer")]));
+        map.insert(
+            "children".to_string(),
+            Value::Array(vec![Value::from("Mark"), Value::from("Jennyfer")]),
+        );
         let value = Value::Struct(map);
 
         assert_eq!(value.get("name"), Some(&Value::from("John Doe")));
