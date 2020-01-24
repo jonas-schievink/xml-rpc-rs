@@ -7,7 +7,7 @@ use xmlrpc::http::{build_headers, check_response};
 use xmlrpc::{Request, Transport};
 
 use reqwest::header::COOKIE;
-use reqwest::{Client, RequestBuilder};
+use reqwest::blocking::{Client, RequestBuilder, Response};
 
 use std::error::Error;
 
@@ -15,7 +15,7 @@ use std::error::Error;
 struct MyTransport(RequestBuilder);
 
 impl Transport for MyTransport {
-    type Stream = reqwest::Response;
+    type Stream = Response;
 
     fn transmit(self, request: &Request) -> Result<Self::Stream, Box<dyn Error + Send + Sync>> {
         let mut body = Vec::new();

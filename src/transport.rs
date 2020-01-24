@@ -67,7 +67,7 @@ pub mod http {
 
     use self::mime::Mime;
     use self::reqwest::header::{CONTENT_LENGTH, CONTENT_TYPE, USER_AGENT};
-    use self::reqwest::RequestBuilder;
+    use self::reqwest::blocking::RequestBuilder;
     use {Request, Transport};
 
     use std::error::Error;
@@ -95,7 +95,7 @@ pub mod http {
     /// Checks that a reqwest `Response` has a status code indicating success and verifies certain
     /// headers.
     pub fn check_response(
-        response: &reqwest::Response,
+        response: &reqwest::blocking::Response,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
         // This is essentially an open-coded version of `Response::error_for_status` that does not
         // consume the response.
@@ -133,7 +133,7 @@ pub mod http {
     /// The request will be sent as specified in the XML-RPC specification: A default `User-Agent`
     /// will be set, along with the correct `Content-Type` and `Content-Length`.
     impl Transport for RequestBuilder {
-        type Stream = reqwest::Response;
+        type Stream = reqwest::blocking::Response;
 
         fn transmit(
             self,
