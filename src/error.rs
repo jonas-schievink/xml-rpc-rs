@@ -42,10 +42,6 @@ impl Display for Error {
 }
 
 impl error::Error for Error {
-    fn description(&self) -> &str {
-        self.0.description()
-    }
-
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         self.0.source()
     }
@@ -88,14 +84,6 @@ impl Display for RequestErrorKind {
 }
 
 impl error::Error for RequestErrorKind {
-    fn description(&self) -> &str {
-        match *self {
-            RequestErrorKind::ParseError(_) => "parse error",
-            RequestErrorKind::TransportError(_) => "transport error",
-            RequestErrorKind::Fault(_) => "server returned a fault",
-        }
-    }
-
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             RequestErrorKind::ParseError(ref err) => Some(err),
@@ -181,13 +169,6 @@ impl Display for ParseError {
 }
 
 impl error::Error for ParseError {
-    fn description(&self) -> &str {
-        match *self {
-            ParseError::XmlError(ref err) => err.description(),
-            ParseError::InvalidValue { .. } => "invalid value for type",
-            ParseError::UnexpectedXml { .. } => "unexpected XML content",
-        }
-    }
 }
 
 /// A `<fault>` response, indicating that a request failed.
@@ -254,9 +235,6 @@ impl Display for Fault {
 }
 
 impl error::Error for Fault {
-    fn description(&self) -> &str {
-        &self.fault_string
-    }
 }
 
 #[cfg(test)]
