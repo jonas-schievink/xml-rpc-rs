@@ -111,7 +111,7 @@ impl<'a> Request<'a> {
         // While we could implement `Transport` for `T: IntoUrl`, such an impl might not be
         // completely obvious (as it applies to `&str`), so I've added this method instead.
         // Might want to reconsider if someone has an objection.
-        self.call(reqwest::Client::new().post(url))
+        self.call(reqwest::blocking::Client::new().post(url))
     }
 
     /// Formats this `Request` as a UTF-8 encoded XML document.
