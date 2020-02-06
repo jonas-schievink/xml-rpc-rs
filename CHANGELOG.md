@@ -5,7 +5,7 @@
 ### Breaking Changes
 
 * Updated `iso8601` dependency to 0.3.0
-* Added a new default feature named `tls` that depends on the (default) tls support in [reqwest].
+* Added a new default feature `tls` that can be disabled to turn off [reqwest]'s TLS support.
 
 [reqwest]: https://github.com/seanmonstar/reqwest
 
