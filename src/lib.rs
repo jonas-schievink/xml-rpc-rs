@@ -4,7 +4,7 @@
 //!
 //! [XML-RPC specification]: http://xmlrpc.scripting.com/spec.html
 
-#![doc(html_root_url = "https://docs.rs/xmlrpc/0.13.1")]
+#![doc(html_root_url = "https://docs.rs/xmlrpc/0.14.0")]
 #![warn(missing_debug_implementations)]
 #![warn(rust_2018_idioms)]
 #![warn(missing_docs)]
