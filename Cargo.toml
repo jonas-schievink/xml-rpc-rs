@@ -17,7 +17,7 @@ maintenance = { status = "actively-developed" }
 [dependencies]
 # public
 iso8601 = "0.3.0"
-reqwest = { version = "0.10.1", features = [ "blocking" ], optional = true }
+reqwest = { version = "0.10.1", features = [ "blocking" ], default-features = false, optional = true }
 # private
 mime = { version = "0.3", optional = true }
 base64 = "0.11.0"
@@ -28,7 +28,8 @@ version-sync = "0.8"
 
 [features]
 http = ["reqwest", "mime"]
-default = ["http"]
+tls = ["reqwest/default-tls"]
+default = ["http", "tls"]
 
 [[example]]
 name = "client"
