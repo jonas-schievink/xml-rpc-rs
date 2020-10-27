@@ -2,7 +2,7 @@
 
 [![crates.io](https://img.shields.io/crates/v/xmlrpc.svg)](https://crates.io/crates/xmlrpc)
 [![docs.rs](https://docs.rs/xmlrpc/badge.svg)](https://docs.rs/xmlrpc/)
-[![Build Status](https://travis-ci.org/jonas-schievink/xml-rpc-rs.svg?branch=master)](https://travis-ci.org/jonas-schievink/xml-rpc-rs)
+![CI](https://github.com/jonas-schievink/xml-rpc-rs/workflows/CI/badge.svg)
 
 This crate provides a simple implementation of the [XML-RPC specification](http://xmlrpc.scripting.com/spec.html) in stable Rust using `xml-rs` and `reqwest`.
 
