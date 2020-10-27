@@ -66,8 +66,8 @@ pub mod http {
     extern crate reqwest;
 
     use self::mime::Mime;
-    use self::reqwest::header::{CONTENT_LENGTH, CONTENT_TYPE, USER_AGENT};
     use self::reqwest::blocking::RequestBuilder;
+    use self::reqwest::header::{CONTENT_LENGTH, CONTENT_TYPE, USER_AGENT};
     use {Request, Transport};
 
     use std::error::Error;

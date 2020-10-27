@@ -6,8 +6,8 @@ extern crate xmlrpc;
 use xmlrpc::http::{build_headers, check_response};
 use xmlrpc::{Request, Transport};
 
-use reqwest::header::COOKIE;
 use reqwest::blocking::{Client, RequestBuilder, Response};
+use reqwest::header::COOKIE;
 
 use std::error::Error;
 
