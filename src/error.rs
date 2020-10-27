@@ -168,8 +168,7 @@ impl Display for ParseError {
     }
 }
 
-impl error::Error for ParseError {
-}
+impl error::Error for ParseError {}
 
 /// A `<fault>` response, indicating that a request failed.
 ///
@@ -234,8 +233,7 @@ impl Display for Fault {
     }
 }
 
-impl error::Error for Fault {
-}
+impl error::Error for Fault {}
 
 #[cfg(test)]
 mod tests {
