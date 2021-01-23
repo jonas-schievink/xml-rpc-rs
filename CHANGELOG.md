@@ -2,7 +2,17 @@
 
 ## Unreleased
 
-No changes.
+### Breaking Changes
+
+* Updated `iso8601` dependency to 0.4.0
+* Updated `reqwest` dependency to 0.11.0
+
+### Misc
+
+* Changed request formatting to be more readable ([#68])
+* Updated private dependencies
+
+[#68]: https://github.com/jonas-schievink/xml-rpc-rs/pull/68
 
 ## 0.14.0 - 2020-02-06
 
