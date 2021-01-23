@@ -121,20 +121,20 @@ impl<'a> Request<'a> {
     /// Any errors reported by the writer will be propagated to the caller. If the writer never
     /// returns an error, neither will this method.
     pub fn write_as_xml<W: Write>(&self, fmt: &mut W) -> io::Result<()> {
-        write!(fmt, r#"<?xml version="1.0" encoding="utf-8"?>"#)?;
-        write!(fmt, r#"<methodCall>"#)?;
-        write!(
+        writeln!(fmt, r#"<?xml version="1.0" encoding="utf-8"?>"#)?;
+        writeln!(fmt, r#"<methodCall>"#)?;
+        writeln!(
             fmt,
-            r#"    <methodName>{}</methodName>"#,
+            r#"<methodName>{}</methodName>"#,
             escape_xml(&self.name)
         )?;
-        write!(fmt, r#"    <params>"#)?;
+        writeln!(fmt, r#"<params>"#)?;
         for value in &self.args {
-            write!(fmt, r#"        <param>"#)?;
+            writeln!(fmt, r#"<param>"#)?;
             value.write_as_xml(fmt)?;
-            write!(fmt, r#"        </param>"#)?;
+            writeln!(fmt, r#"</param>"#)?;
         }
-        write!(fmt, r#"    </params>"#)?;
+        writeln!(fmt, r#"</params>"#)?;
         write!(fmt, r#"</methodCall>"#)?;
         Ok(())
     }
