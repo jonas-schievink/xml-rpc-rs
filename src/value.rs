@@ -108,33 +108,33 @@ impl Value {
     ///
     /// Any error reported by the writer will be propagated to the caller.
     pub fn write_as_xml<W: Write>(&self, fmt: &mut W) -> io::Result<()> {
-        writeln!(fmt, "<value>")?;
+        write!(fmt, "<value>")?;
 
         match *self {
             Value::Int(i) => {
-                writeln!(fmt, "<i4>{}</i4>", i)?;
+                write!(fmt, "<i4>{}</i4>", i)?;
             }
             Value::Int64(i) => {
-                writeln!(fmt, "<i8>{}</i8>", i)?;
+                write!(fmt, "<i8>{}</i8>", i)?;
             }
             Value::Bool(b) => {
-                writeln!(fmt, "<boolean>{}</boolean>", if b { "1" } else { "0" })?;
+                write!(fmt, "<boolean>{}</boolean>", if b { "1" } else { "0" })?;
             }
             Value::String(ref s) => {
-                writeln!(fmt, "<string>{}</string>", escape_xml(s))?;
+                write!(fmt, "<string>{}</string>", escape_xml(s))?;
             }
             Value::Double(d) => {
-                writeln!(fmt, "<double>{}</double>", d)?;
+                write!(fmt, "<double>{}</double>", d)?;
             }
             Value::DateTime(date_time) => {
-                writeln!(
+                write!(
                     fmt,
                     "<dateTime.iso8601>{}</dateTime.iso8601>",
                     format_datetime(&date_time)
                 )?;
             }
             Value::Base64(ref data) => {
-                writeln!(fmt, "<base64>{}</base64>", encode(data))?;
+                write!(fmt, "<base64>{}</base64>", encode(data))?;
             }
             Value::Struct(ref map) => {
                 writeln!(fmt, "<struct>")?;
@@ -144,19 +144,19 @@ impl Value {
                     value.write_as_xml(fmt)?;
                     writeln!(fmt, "</member>")?;
                 }
-                writeln!(fmt, "</struct>")?;
+                write!(fmt, "</struct>")?;
             }
             Value::Array(ref array) => {
-                writeln!(fmt, "<array>")?;
+                write!(fmt, "<array>")?;
                 writeln!(fmt, "<data>")?;
                 for value in array {
                     value.write_as_xml(fmt)?;
                 }
-                writeln!(fmt, "</data>")?;
-                writeln!(fmt, "</array>")?;
+                write!(fmt, "</data>")?;
+                write!(fmt, "</array>")?;
             }
             Value::Nil => {
-                writeln!(fmt, "<nil/>")?;
+                write!(fmt, "<nil/>")?;
             }
         }
 
@@ -393,7 +393,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             str::from_utf8(&output).unwrap(),
-            "<value>\n<string>&lt;xml>&amp;nbsp;string</string>\n</value>\n"
+            "<value><string>&lt;xml>&amp;nbsp;string</string></value>\n"
         );
     }
 
@@ -404,7 +404,7 @@ mod tests {
         map.insert("x&<x".to_string(), Value::from(true));
 
         Value::Struct(map).write_as_xml(&mut output).unwrap();
-        assert_eq!(str::from_utf8(&output).unwrap(), "<value>\n<struct>\n<member>\n<name>x&amp;&lt;x</name>\n<value>\n<boolean>1</boolean>\n</value>\n</member>\n</struct>\n</value>\n");
+        assert_eq!(str::from_utf8(&output).unwrap(), "<value><struct>\n<member>\n<name>x&amp;&lt;x</name>\n<value><boolean>1</boolean></value>\n</member>\n</struct></value>\n");
     }
 
     #[test]
