@@ -13,7 +13,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: "--deny warnings"
-  MSRV: 1.44.0
+  MSRV: 1.45.0
 
 jobs:
   test:
