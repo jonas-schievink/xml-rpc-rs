@@ -306,6 +306,76 @@ impl From<Vec<u8>> for Value {
     }
 }
 
+impl From<Option<i64>> for Value {
+    fn from(other: Option<i64>) -> Self {
+        match other {
+            Some(x) => Value::Int64(x),
+            None => Value::Nil,
+        }
+    }
+}
+
+impl From<Option<i32>> for Value {
+    fn from(other: Option<i32>) -> Self {
+        match other {
+            Some(x) => Value::Int(x),
+            None => Value::Nil,
+        }
+    }
+}
+
+impl From<Option<bool>> for Value {
+    fn from(other: Option<bool>) -> Self {
+        match other {
+            Some(x) => Value::Bool(x),
+            None => Value::Nil,
+        }
+    }
+}
+
+impl From<Option<String>> for Value {
+    fn from(other: Option<String>) -> Self {
+        match other {
+            Some(x) => Value::String(x),
+            None => Value::Nil,
+        }
+    }
+}
+
+impl<'a> From<Option<&'a str>> for Value {
+    fn from(other: Option<&'a str>) -> Self {
+        match other {
+            Some(x) => Value::String(x.to_string()),
+            None => Value::Nil,
+        }
+    }
+}
+
+impl From<Option<f64>> for Value {
+    fn from(other: Option<f64>) -> Self {
+        match other {
+            Some(x) => Value::Double(x),
+            None => Value::Nil,
+        }
+    }
+}
+
+impl From<Option<DateTime>> for Value {
+    fn from(other: Option<DateTime>) -> Self {
+        match other {
+            Some(x) => Value::DateTime(x),
+            None => Value::Nil,
+        }
+    }
+}
+impl From<Option<Vec<u8>>> for Value {
+    fn from(other: Option<Vec<u8>>) -> Self {
+        match other {
+            Some(x) => Value::Base64(x),
+            None => Value::Nil,
+        }
+    }
+}
 mod sealed {
     /// A trait that is only nameable (and thus implementable) inside this crate.
     pub trait Sealed {}
