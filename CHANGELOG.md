@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-No changes.
+### New Features
+
+- Added `From<Option<_>>` impls for `Value`, yielding either `Nil` or the contained value ([#76])
+
+[#76]: https://github.com/jonas-schievink/xml-rpc-rs/pull/76
 
 ## 0.15.0 - 2021-01-23
 
