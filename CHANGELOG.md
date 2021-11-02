@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+No changes.
+
+## 0.15.1 - 2021-11-02
+
 ### New Features
 
 - Added `From<Option<_>>` impls for `Value`, yielding either `Nil` or the contained value ([#76])
