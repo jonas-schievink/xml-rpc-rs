@@ -1,5 +1,4 @@
-use Request;
-
+use crate::request::Request;
 use std::error::Error;
 use std::io::Read;
 
@@ -35,7 +34,7 @@ pub trait Transport {
     /// return an appropriate [`Error`] to the caller.
     ///
     /// [`Error`]: struct.Error.html
-    fn transmit(self, request: &Request<'_>) -> Result<Self::Stream, Box<dyn Error + Send + Sync>>;
+    fn transmit(self, request: &Request<'_>) -> std::result::Result<String, Box<dyn Error + Send + Sync>>;
 }
 
 // FIXME: Link to `Transport` and `RequestBuilder` using intra-rustdoc links. Relative links break
@@ -66,9 +65,11 @@ pub mod http {
     extern crate reqwest;
 
     use self::mime::Mime;
-    use self::reqwest::blocking::RequestBuilder;
+    use self::reqwest::RequestBuilder;
     use self::reqwest::header::{CONTENT_LENGTH, CONTENT_TYPE, USER_AGENT};
-    use {Request, Transport};
+    use crate::request::Request;
+    use crate::transport::Transport;
+    use tokio::runtime::Runtime;
 
     use std::error::Error;
     use std::str::FromStr;
@@ -92,10 +93,18 @@ pub mod http {
             .header(CONTENT_LENGTH, body_len)
     }
 
+    // fn send_request(builder: RequestBuilder, body: Vec<u8>) -> reqwest::Response {
+    //     let body = build_headers(builder, body.len() as u64).body(body);
+    //     let resp = async move {body.send().await};
+
+    //     std::future::block_on(resp)
+    // }
+
+
     /// Checks that a reqwest `Response` has a status code indicating success and verifies certain
     /// headers.
     pub fn check_response(
-        response: &reqwest::blocking::Response,
+        response: &reqwest::Response,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
         // This is essentially an open-coded version of `Response::error_for_status` that does not
         // consume the response.
@@ -133,23 +142,55 @@ pub mod http {
     /// The request will be sent as specified in the XML-RPC specification: A default `User-Agent`
     /// will be set, along with the correct `Content-Type` and `Content-Length`.
     impl Transport for RequestBuilder {
-        type Stream = reqwest::blocking::Response;
+        //type Stream = reqwest::Response;
+        type Stream = &'static[u8];
 
         fn transmit(
             self,
             request: &Request<'_>,
-        ) -> Result<Self::Stream, Box<dyn Error + Send + Sync>> {
+        ) -> Result<String, Box<dyn Error + Send + Sync>> {
             // First, build the body XML
             let mut body = Vec::new();
             // This unwrap never panics as we are using `Vec<u8>` as a `Write` implementor,
             // and not doing anything else that could return an `Err` in `write_as_xml()`.
             request.write_as_xml(&mut body).unwrap();
+            // async part needs to go to separate thread because of interference with caller
+            // see https://stackoverflow.com/questions/52521201/how-do-i-synchronously-return-a-value-calculated-in-an-asynchronous-future-in-st
+            // https://stackoverflow.com/questions/62536566/how-can-i-create-a-tokio-runtime-inside-another-tokio-runtime-without-getting-th
+            
+            // check https://stackoverflow.com/questions/61996298/using-rust-libraries-reqwest-and-select-in-conjunction
+            // let resp = async move {
+            //     match build_headers(self, body.len() as u64).body(body).send().await {
+            //         Ok(r) => Ok(r),
+            //         Err(e) => Err(e)
+            //     }
+            // };
+            // //let response: reqwest::Response;
+            // let response = std::thread::spawn( || { match Runtime::new().unwrap().block_on(resp) {
+            //     Ok(o) => o,
+            //     Err(_) => ()
+            // } }).join();
 
-            let response = build_headers(self, body.len() as u64).body(body).send()?;
+            // if response.is_ok() {
+            // check_response(&response.as_ref().unwrap())?;
+            // }
 
-            check_response(&response)?;
+            // let bv = async move { 
+            //     match response.unwrap().text().await {
+            //         Ok(r) => Ok(r),
+            //         Err(e) => Err(e)
+            //     }
+            // };
+            // let rv = std::thread::spawn( || {Runtime::new().unwrap().block_on(bv).unwrap()}).join();
+            
+            // rewrite all, async block
+            let ab = async move {
+                let rv = build_headers(self, body.len() as u64).body(body).send().await?;
+                check_response(&rv).unwrap();
+                rv.text().await
+            };
 
-            Ok(response)
+            std::thread::spawn( || {Runtime::new().unwrap().block_on(ab)}).join().unwrap().map_err(|error| Box::new(error) as Box<dyn Error + Send + Sync>)
         }
     }
 }

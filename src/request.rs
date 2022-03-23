@@ -1,11 +1,11 @@
 #[cfg(feature = "http")]
 extern crate reqwest;
 
-use error::{Error, RequestErrorKind};
-use parser::parse_response;
-use transport::Transport;
-use utils::escape_xml;
-use Value;
+use crate::error::{Error, RequestErrorKind};
+use crate::parser::parse_response;
+use crate::transport::Transport;
+use crate::utils::escape_xml;
+use crate::value::Value;
 
 use std::collections::BTreeMap;
 use std::io::{self, Write};
@@ -77,9 +77,11 @@ impl<'a> Request<'a> {
     /// [`call_url`]: #method.call_url
     /// [`Transport`]: trait.Transport.html
     pub fn call<T: Transport>(&self, transport: T) -> Result<Value, Error> {
-        let mut reader = transport
+        let tr = transport
             .transmit(self)
             .map_err(RequestErrorKind::TransportError)?;
+
+        let mut reader = tr.as_bytes();
 
         let response = parse_response(&mut reader).map_err(RequestErrorKind::ParseError)?;
 
@@ -111,7 +113,7 @@ impl<'a> Request<'a> {
         // While we could implement `Transport` for `T: IntoUrl`, such an impl might not be
         // completely obvious (as it applies to `&str`), so I've added this method instead.
         // Might want to reconsider if someone has an objection.
-        self.call(reqwest::blocking::Client::new().post(url))
+        self.call(reqwest::Client::new().post(url))
     }
 
     /// Formats this `Request` as a UTF-8 encoded XML document.

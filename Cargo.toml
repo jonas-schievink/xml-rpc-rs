@@ -9,6 +9,7 @@ readme = "README.md"
 license = "CC0-1.0"
 name = "xmlrpc"
 version = "0.15.1"
+edition = "2021"
 
 # cargo-release configuration
 [package.metadata.release]
@@ -41,11 +42,20 @@ maintenance = { status = "actively-developed" }
 [dependencies]
 # public
 iso8601 = "0.4.0"
-reqwest = { version = "0.11.0", features = [ "blocking" ], default-features = false, optional = true }
 # private
 mime = { version = "0.3", optional = true }
 base64 = "0.13.0"
 xml-rs = "0.8.0"
+futures = "0.3.21"
+
+[dependencies.reqwest]
+version = "0.11.*"
+default-features = false
+optional = true
+
+[dependencies.tokio]
+version = "1.17.*"
+features = ["full"]
 
 [dev-dependencies]
 version-sync = "0.9"

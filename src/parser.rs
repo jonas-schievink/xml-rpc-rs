@@ -1,7 +1,7 @@
 //! XML-RPC response parser.
 
-use error::ParseError;
-use {Fault, Value};
+use crate::error::{ParseError, Fault};
+use crate::value::Value;
 
 use base64;
 use iso8601::datetime;
@@ -353,7 +353,7 @@ pub fn parse_response<R: Read>(reader: &mut R) -> ParseResult<Response> {
 mod tests {
     use super::*;
 
-    use error::Fault;
+    use crate::error::Fault;
     use Value;
 
     use std::fmt::Debug;

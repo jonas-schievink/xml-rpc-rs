@@ -1,6 +1,6 @@
 //! Contains the different types of values understood by XML-RPC.
 
-use utils::{escape_xml, format_datetime};
+use crate::utils::{escape_xml, format_datetime};
 
 use base64::encode;
 use iso8601::DateTime;

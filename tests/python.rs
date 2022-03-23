@@ -96,6 +96,7 @@ fn run_tests() {
     Fault::from_value(&results[2]).expect("expected fault as third result");
 }
 
+
 fn main() {
     let mut reaper = match setup() {
         Ok(reap) => reap,
