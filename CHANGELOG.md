@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-No changes.
+* Updated to Rust 2021 Syntax
+* Updated `reqwest`to 0.11.1
+
+- Added `async` feature
+- Refactored to not use `reqwest::blocking`
 
 ## 0.15.1 - 2021-11-02
 

@@ -8,7 +8,7 @@ categories = ["network-programming", "encoding"]
 readme = "README.md"
 license = "CC0-1.0"
 name = "xmlrpc"
-version = "0.15.1"
+version = "0.16.0"
 edition = "2021"
 
 # cargo-release configuration
@@ -62,6 +62,7 @@ version-sync = "0.9"
 
 [features]
 http = ["reqwest", "mime"]
+async = ["reqwest", "mime"]
 tls = ["reqwest/default-tls"]
 default = ["http", "tls"]
 

@@ -34,7 +34,7 @@ pub trait Transport {
     /// return an appropriate [`Error`] to the caller.
     ///
     /// [`Error`]: struct.Error.html
-    fn transmit(self, request: &Request<'_>) -> std::result::Result<String, Box<dyn Error + Send + Sync>>;
+    fn transmit(self, request: &Request<'_>) -> std::result::Result<Self::Stream, Box<dyn Error + Send + Sync + 'static>>;
 }
 
 // FIXME: Link to `Transport` and `RequestBuilder` using intra-rustdoc links. Relative links break
@@ -64,6 +64,7 @@ pub mod http {
     extern crate mime;
     extern crate reqwest;
 
+    use std::io::Cursor;
     use self::mime::Mime;
     use self::reqwest::RequestBuilder;
     use self::reqwest::header::{CONTENT_LENGTH, CONTENT_TYPE, USER_AGENT};
@@ -137,18 +138,24 @@ pub mod http {
         Ok(())
     }
 
+    // private execution of the transport
+    // fn transport_exec(builder: RequestBuilder) -> Result<&'static[u8], Box<dyn Error + Send + Sync>> {
+
+    // }
+
     /// Use a `RequestBuilder` as the transport.
     ///
     /// The request will be sent as specified in the XML-RPC specification: A default `User-Agent`
     /// will be set, along with the correct `Content-Type` and `Content-Length`.
     impl Transport for RequestBuilder {
         //type Stream = reqwest::Response;
-        type Stream = &'static[u8];
+        //type Stream = &'static[u8];
+        type Stream = Cursor<String>;
 
         fn transmit(
             self,
             request: &Request<'_>,
-        ) -> Result<String, Box<dyn Error + Send + Sync>> {
+        ) -> Result<Self::Stream, Box<(dyn Error + Send + Sync + 'static)>> {
             // First, build the body XML
             let mut body = Vec::new();
             // This unwrap never panics as we are using `Vec<u8>` as a `Write` implementor,
@@ -190,7 +197,10 @@ pub mod http {
                 rv.text().await
             };
 
-            std::thread::spawn( || {Runtime::new().unwrap().block_on(ab)}).join().unwrap().map_err(|error| Box::new(error) as Box<dyn Error + Send + Sync>)
+            let rs = std::thread::spawn( || {Runtime::new().unwrap().block_on(ab)}).join().unwrap().unwrap();//.map_err(|error| Box::new(error) as Box<dyn Error + Send + Sync>);
+            let rc = Cursor::new(rs);
+
+            Ok(rc) //.map_err(|error| Box::new(error) as Box<dyn Error + Send + Sync>)
         }
     }
 }

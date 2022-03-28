@@ -77,11 +77,11 @@ impl<'a> Request<'a> {
     /// [`call_url`]: #method.call_url
     /// [`Transport`]: trait.Transport.html
     pub fn call<T: Transport>(&self, transport: T) -> Result<Value, Error> {
-        let tr = transport
+        let mut reader = transport
             .transmit(self)
             .map_err(RequestErrorKind::TransportError)?;
 
-        let mut reader = tr.as_bytes();
+        //let mut reader = tr.as_bytes();
 
         let response = parse_response(&mut reader).map_err(RequestErrorKind::ParseError)?;
 

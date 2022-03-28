@@ -11,14 +11,15 @@ use reqwest::{Client, RequestBuilder};
 use reqwest::header::COOKIE;
 
 use std::error::Error;
+use std::io::Cursor;
 
 /// Custom transport that adds a cookie header.
 struct MyTransport(RequestBuilder);
 
 impl Transport for MyTransport {
-    type Stream = &'static[u8];
+    type Stream = Cursor<String>;
 
-    fn transmit(self, request: &Request) -> Result<String, Box<dyn Error + Send + Sync>> {
+    fn transmit(self, request: &Request) -> Result<Self::Stream, Box<dyn Error + Send + Sync>> {
         let mut body = Vec::new();
         request
             .write_as_xml(&mut body)
@@ -34,7 +35,7 @@ impl Transport for MyTransport {
         check_response(&resp)?;
 
         let rs = async move {resp.text().await.unwrap()};
-        let rv = block_on(rs);
+        let rv = Cursor::new(block_on(rs));
 
         Ok(rv)
     }
