@@ -94,14 +94,6 @@ pub mod http {
             .header(CONTENT_LENGTH, body_len)
     }
 
-    // fn send_request(builder: RequestBuilder, body: Vec<u8>) -> reqwest::Response {
-    //     let body = build_headers(builder, body.len() as u64).body(body);
-    //     let resp = async move {body.send().await};
-
-    //     std::future::block_on(resp)
-    // }
-
-
     /// Checks that a reqwest `Response` has a status code indicating success and verifies certain
     /// headers.
     pub fn check_response(
@@ -138,18 +130,12 @@ pub mod http {
         Ok(())
     }
 
-    // private execution of the transport
-    // fn transport_exec(builder: RequestBuilder) -> Result<&'static[u8], Box<dyn Error + Send + Sync>> {
-
-    // }
-
     /// Use a `RequestBuilder` as the transport.
     ///
     /// The request will be sent as specified in the XML-RPC specification: A default `User-Agent`
     /// will be set, along with the correct `Content-Type` and `Content-Length`.
     impl Transport for RequestBuilder {
-        //type Stream = reqwest::Response;
-        //type Stream = &'static[u8];
+        //Chose Cursor<String> as Cursor implements the Read Trait and has ownership
         type Stream = Cursor<String>;
 
         fn transmit(
@@ -161,46 +147,22 @@ pub mod http {
             // This unwrap never panics as we are using `Vec<u8>` as a `Write` implementor,
             // and not doing anything else that could return an `Err` in `write_as_xml()`.
             request.write_as_xml(&mut body).unwrap();
+            
             // async part needs to go to separate thread because of interference with caller
-            // see https://stackoverflow.com/questions/52521201/how-do-i-synchronously-return-a-value-calculated-in-an-asynchronous-future-in-st
-            // https://stackoverflow.com/questions/62536566/how-can-i-create-a-tokio-runtime-inside-another-tokio-runtime-without-getting-th
-            
-            // check https://stackoverflow.com/questions/61996298/using-rust-libraries-reqwest-and-select-in-conjunction
-            // let resp = async move {
-            //     match build_headers(self, body.len() as u64).body(body).send().await {
-            //         Ok(r) => Ok(r),
-            //         Err(e) => Err(e)
-            //     }
-            // };
-            // //let response: reqwest::Response;
-            // let response = std::thread::spawn( || { match Runtime::new().unwrap().block_on(resp) {
-            //     Ok(o) => o,
-            //     Err(_) => ()
-            // } }).join();
-
-            // if response.is_ok() {
-            // check_response(&response.as_ref().unwrap())?;
-            // }
-
-            // let bv = async move { 
-            //     match response.unwrap().text().await {
-            //         Ok(r) => Ok(r),
-            //         Err(e) => Err(e)
-            //     }
-            // };
-            // let rv = std::thread::spawn( || {Runtime::new().unwrap().block_on(bv).unwrap()}).join();
-            
-            // rewrite all, async block
-            let ab = async move {
+            let async_transport = async move {
                 let rv = build_headers(self, body.len() as u64).body(body).send().await?;
                 check_response(&rv).unwrap();
                 rv.text().await
             };
 
-            let rs = std::thread::spawn( || {Runtime::new().unwrap().block_on(ab)}).join().unwrap().unwrap();//.map_err(|error| Box::new(error) as Box<dyn Error + Send + Sync>);
-            let rc = Cursor::new(rs);
+            // execute the async transport in an own thread, to the blocking async execution can be used
+            let rs = std::thread::spawn( || {Runtime::new().unwrap().block_on(async_transport)}).join().unwrap().map_err(|error| Box::new(error) as Box<dyn Error + Send + Sync>);
 
-            Ok(rc) //.map_err(|error| Box::new(error) as Box<dyn Error + Send + Sync>)
+            // error handling of the return value
+            match rs {
+                Ok(o) => Ok(Cursor::new(o)),
+                Err(error) => Err(error as Box<dyn Error + Send + Sync>),
+            }
         }
     }
 }

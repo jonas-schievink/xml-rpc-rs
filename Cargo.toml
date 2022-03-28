@@ -62,7 +62,6 @@ version-sync = "0.9"
 
 [features]
 http = ["reqwest", "mime"]
-async = ["reqwest", "mime"]
 tls = ["reqwest/default-tls"]
 default = ["http", "tls"]
 
