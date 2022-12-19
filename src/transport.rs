@@ -151,7 +151,7 @@ pub mod http {
             // async part needs to go to separate thread because of interference with caller
             let async_transport = async move {
                 let rv = build_headers(self, body.len() as u64).body(body).send().await?;
-                _ = check_response(&rv);
+                _ = check_response(&rv).expect("No valid response");
                 rv.text().await
             };
 
