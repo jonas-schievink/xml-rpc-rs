@@ -72,7 +72,7 @@ pub mod http {
     use crate::transport::Transport;
     use tokio::runtime::Runtime;
 
-    use std::error::Error;
+    use std::error::{Error, self};
     use std::str::FromStr;
 
     /// Appends all HTTP headers required by the XML-RPC specification to the `RequestBuilder`.
@@ -156,13 +156,16 @@ pub mod http {
             };
 
             // execute the async transport in an own thread, to the blocking async execution can be used
-            let rs = std::thread::spawn( || {Runtime::new().unwrap().block_on(async_transport)}).join().unwrap().map_err(|error| Box::new(error) as Box<dyn Error + Send + Sync>);
+            let rs = std::thread::spawn( || {Runtime::new().unwrap().block_on(async_transport)}).join();
 
             // error handling of the return value
-            match rs {
+            match rs.unwrap() {
                 Ok(o) => Ok(Cursor::new(o)),
-                Err(error) => Err(error as Box<dyn Error + Send + Sync>),
+                Err(error) => Err(Box::new(error)),
             }
+
+            //let rs = std::thread::spawn( || {Runtime::new().unwrap().block_on(async_transport)}).join().unwrap().map_err(|error| Box::new(error) as Box<dyn Error + Send + Sync>);
+
         }
     }
 }
