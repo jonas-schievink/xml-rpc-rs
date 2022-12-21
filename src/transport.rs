@@ -156,12 +156,12 @@ pub mod http {
             };
 
             // execute the async transport in an own thread, to the blocking async execution can be used
-            let rs = std::thread::spawn( || {Runtime::new().unwrap().block_on(async_transport)}).join();
+            let rs = std::thread::spawn( || {Runtime::new().unwrap().block_on(async_transport)}).join().expect("Expected result from async thread");
 
             // error handling of the return value
-            match rs.unwrap() {
+            match rs {
                 Ok(o) => Ok(Cursor::new(o)),
-                Err(error) => Err(Box::new(error)),
+                Err(err) => Err(Box::new(err) as Box<dyn Error + Send + Sync>),
             }
 
             //let rs = std::thread::spawn( || {Runtime::new().unwrap().block_on(async_transport)}).join().unwrap().map_err(|error| Box::new(error) as Box<dyn Error + Send + Sync>);
