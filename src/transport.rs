@@ -1,5 +1,4 @@
-use Request;
-
+use crate::request::Request;
 use std::error::Error;
 use std::io::Read;
 
@@ -35,7 +34,7 @@ pub trait Transport {
     /// return an appropriate [`Error`] to the caller.
     ///
     /// [`Error`]: struct.Error.html
-    fn transmit(self, request: &Request<'_>) -> Result<Self::Stream, Box<dyn Error + Send + Sync>>;
+    fn transmit(self, request: &Request<'_>) -> std::result::Result<Self::Stream, Box<dyn Error + Send + Sync + 'static>>;
 }
 
 // FIXME: Link to `Transport` and `RequestBuilder` using intra-rustdoc links. Relative links break
@@ -65,10 +64,13 @@ pub mod http {
     extern crate mime;
     extern crate reqwest;
 
+    use std::io::Cursor;
     use self::mime::Mime;
-    use self::reqwest::blocking::RequestBuilder;
+    use self::reqwest::RequestBuilder;
     use self::reqwest::header::{CONTENT_LENGTH, CONTENT_TYPE, USER_AGENT};
-    use {Request, Transport};
+    use crate::request::Request;
+    use crate::transport::Transport;
+    use tokio::runtime::Runtime;
 
     use std::error::Error;
     use std::str::FromStr;
@@ -95,7 +97,7 @@ pub mod http {
     /// Checks that a reqwest `Response` has a status code indicating success and verifies certain
     /// headers.
     pub fn check_response(
-        response: &reqwest::blocking::Response,
+        response: &reqwest::Response,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
         // This is essentially an open-coded version of `Response::error_for_status` that does not
         // consume the response.
@@ -133,23 +135,37 @@ pub mod http {
     /// The request will be sent as specified in the XML-RPC specification: A default `User-Agent`
     /// will be set, along with the correct `Content-Type` and `Content-Length`.
     impl Transport for RequestBuilder {
-        type Stream = reqwest::blocking::Response;
+        //Chose Cursor<String> as Cursor implements the Read Trait and has ownership
+        type Stream = Cursor<String>;
 
         fn transmit(
             self,
             request: &Request<'_>,
-        ) -> Result<Self::Stream, Box<dyn Error + Send + Sync>> {
+        ) -> Result<Self::Stream, Box<(dyn Error + Send + Sync + 'static)>> {
             // First, build the body XML
             let mut body = Vec::new();
             // This unwrap never panics as we are using `Vec<u8>` as a `Write` implementor,
             // and not doing anything else that could return an `Err` in `write_as_xml()`.
             request.write_as_xml(&mut body).unwrap();
+            
+            // async part needs to go to separate thread because of interference with caller
+            let async_transport = async move {
+                let rv = build_headers(self, body.len() as u64).body(body).send().await?;
+                check_response(&rv).expect("No valid response");
+                rv.text().await
+            };
 
-            let response = build_headers(self, body.len() as u64).body(body).send()?;
+            // execute the async transport in an own thread, to the blocking async execution can be used
+            let rs = std::thread::spawn( || {Runtime::new().unwrap().block_on(async_transport)}).join().expect("Expected result from async thread");
 
-            check_response(&response)?;
+            // error handling of the return value
+            match rs {
+                Ok(o) => Ok(Cursor::new(o)),
+                Err(err) => Err(Box::new(err) as Box<dyn Error + Send + Sync>),
+            }
 
-            Ok(response)
+            //let rs = std::thread::spawn( || {Runtime::new().unwrap().block_on(async_transport)}).join().unwrap().map_err(|error| Box::new(error) as Box<dyn Error + Send + Sync>);
+
         }
     }
 }

@@ -1,6 +1,6 @@
 //! Defines error types used by this library.
 
-use Value;
+use crate::value::Value;
 
 use xml::common::TextPosition;
 use xml::reader::Error as XmlError;

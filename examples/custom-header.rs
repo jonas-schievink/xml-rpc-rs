@@ -3,19 +3,21 @@
 extern crate reqwest;
 extern crate xmlrpc;
 
+use futures::executor::block_on;
 use xmlrpc::http::{build_headers, check_response};
 use xmlrpc::{Request, Transport};
 
-use reqwest::blocking::{Client, RequestBuilder, Response};
+use reqwest::{Client, RequestBuilder};
 use reqwest::header::COOKIE;
 
 use std::error::Error;
+use std::io::Cursor;
 
 /// Custom transport that adds a cookie header.
 struct MyTransport(RequestBuilder);
 
 impl Transport for MyTransport {
-    type Stream = Response;
+    type Stream = Cursor<String>;
 
     fn transmit(self, request: &Request) -> Result<Self::Stream, Box<dyn Error + Send + Sync>> {
         let mut body = Vec::new();
@@ -23,14 +25,19 @@ impl Transport for MyTransport {
             .write_as_xml(&mut body)
             .expect("could not write request to buffer (this should never happen)");
 
-        let response = build_headers(self.0, body.len() as u64)
+        let response = async move {build_headers(self.0, body.len() as u64)
             .header(COOKIE, "SESSION=123abc") // Our custom header will be a `Cookie` header
             .body(body)
-            .send()?;
+            .send().await.unwrap()};
+        
+        let resp = block_on(response);
 
-        check_response(&response)?;
+        check_response(&resp)?;
 
-        Ok(response)
+        let rs = async move {resp.text().await.unwrap()};
+        let rv = Cursor::new(block_on(rs));
+
+        Ok(rv)
     }
 }
 

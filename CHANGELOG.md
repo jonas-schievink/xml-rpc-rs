@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-No changes.
+* Updated to Rust 2021 Syntax
+* Updated `reqwest`to 0.11.10
+* Added `tokio` dependency for async runtime (feature rt-multi-thread)
+
+- Refactored to not use `reqwest::blocking`, all interfaces stay stable
 
 ## 0.15.1 - 2021-11-02
 
